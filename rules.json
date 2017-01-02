@@ -1,0 +1,32 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+      "connected":{
+       ".read": true,
+         "$username": {
+         ".write":"newData.exists() || !newData.exists()"
+         }
+      },
+      "chat_messages":{
+        ".read": true,
+        ".indexOn": ["time"],
+      "$message": {
+        ".write":"newData.exists() || !newData.exists()",
+        ".validate": "newData.hasChildren(['author','pass', 'body', 'time'])",
+        "author": {
+          ".validate": "newData.isString() && newData.val().length <= 20 && newData.val().length > 0 && !newData.val().contains('<script>')"
+        },
+        "pass":{
+          ".validate": "newData.isString() && newData.val().length <= 20 && newData.val().length > 0 && !newData.val().contains('<script>')"
+        },
+        "body": {
+          ".validate": "newData.isString() && newData.val().length <= 256 && newData.val().length > 0 && !newData.val().contains('<script>')"
+        },
+        "time": {
+          ".validate": "newData.isNumber()"
+        }
+      }   
+    }
+  }
+}
