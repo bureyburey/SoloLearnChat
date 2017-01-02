@@ -4,7 +4,7 @@ function textToHtml(text) {
 	
 	text = text.replace(
 		/(?:[^\\]|^)\[url:([^\]]+)\]\(([^)]+)\)/g,
-		(_, name, url) => ' <a href="' + url + '>' + name + '</a>'
+		(_, name, url) => ' <a href="' + url + '">' + name + '</a>'
 	);
 	
 	text = text.replace(/(?:[^\\]|^)\*\*([^*])+\*\*/g, (_, content) => '<b>' + content + '</b>');
