@@ -7,8 +7,8 @@ function textToHtml(text) {
 		(_, name, url) => ' <a href="' + url + '">' + name + '</a>'
 	);
 	
-	text = text.replace(/(?:[^\\]|^)\*\*([^*])+\*\*/g, (_, content) => '<b>' + content + '</b>');
-	text = text.replace(/(?:[^\\]|^)_([^_])+_/g, (_, content) => '<i>' + content + '</i>');
+	text = text.replace(/(?:[^\\]|^)\*\*([^*]+)\*\*/g, (_, content) => '<b>' + content + '</b>');
+	text = text.replace(/(?:[^\\]|^)_([^_]+)_/g, (_, content) => '<i>' + content + '</i>');
 	
 	text = text.replace(/\\(.)/g, (_, character) => character);
 	
