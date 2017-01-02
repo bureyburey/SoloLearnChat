@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+    <head>
+            <title>Firebase chat</title>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
+            <script src="https://code.jquery.com/ui/1.10.4/jquery-ui.js"></script>
+            <link href="https://code.jquery.com/ui/1.10.4/themes/ui-lightness/jquery-ui.css" rel="stylesheet">
+            <script src="https://cdn.firebase.com/js/client/2.4.2/firebase.js"></script>
+            
+            
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+            <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet"/>
+            
+            <link rel="stylesheet" href="index.css">
+            <script src="index.js"></script>
+            
+    </head>
+    <body onload='init()'>
+        <div id='container'>
+            <div id='table_connected_users_container' title='Who is online?'>
+            <table id='table_connected_users'><tr><th>Connected Users</th></tr></table>
+            </div>
+                        
+            <h1 class="headline">Firebase Chat <a href="https://www.sololearn.com/Profile/197327" id="name_tag">By Burey</a>
+            <br class='half_br'><span id="name_tag_michael">Layout Design by </span><a href="https://www.sololearn.com/Profile/1249360">Michael Ermishin (C00l Ha43r)</a></h1>    
+            
+            <div id='container_login'>
+                <input id='login_name' class="input" placeholder='User Name:'>
+                <button id='btn_login' class='button'>Login</button>
+            </div>
+                        
+            <div id='container_chat' style='display:none'>
+                <label id='logged_user_name'>Logged in as:</label>
+                <button id='btn_logout' class='button'>Logout</button>
+                <br><br>
+                
+                <textarea id='new_message' class="input" placeholder='Message:'></textarea>
+                <br><br>
+                <button id='btn_post' class='button'>Post</button>
+                <button id='show_connected' class='button'>Connected Users:</button>
+                <br><br>
+                            
+                <div id='message_list'></div>
+                 <div class="loader"></div>
+            </div>
+        </div>
+    </body>
+</html>
