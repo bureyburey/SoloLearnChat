@@ -21,6 +21,13 @@ a{
    display: inline;
    margin: 0px 0;
 }
+.about{
+    font-size:15px;
+    cursor:pointer;
+}
+#about_dialog{
+    text-align: center;
+}
 #name_tag {
  display: inline;
   font-size: 15px;
