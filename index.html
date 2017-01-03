@@ -7,7 +7,6 @@
             <link href="https://code.jquery.com/ui/1.10.4/themes/ui-lightness/jquery-ui.css" rel="stylesheet">
             <script src="https://cdn.firebase.com/js/client/2.4.2/firebase.js"></script>
             
-            
             <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
             <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet"/>
             
@@ -17,15 +16,19 @@
     </head>
     <body onload='init()'>
         <div id='container'>
+            <div id='about_dialog' title='About'>Firebase Chat<br>Created by<br>Burey<br>&&<br>Michael Ermishin</div>
             <div id='table_connected_users_container' title='Who is online?'>
-            <table id='table_connected_users'><tr><th>Connected Users</th></tr></table>
+            <table id='table_connected_users'><tr><th style='color:green;'>Connected Users</th></tr></table>
             </div>
-                        
-            <h1 class="headline">Firebase Chat <a href="https://www.sololearn.com/Profile/197327" id="name_tag">By Burey</a>
-            <br class='half_br'><span id="name_tag_michael">Layout Design by </span><a href="https://www.sololearn.com/Profile/1249360">Michael Ermishin (C00l Ha43r)</a></h1>    
+            
+            <h1 class="headline">Firebase Chat <span class='about'>*<u class='about'>About</u>*</span>
+            <br class='half_br'><a href="https://www.sololearn.com/Profile/197327" id="name_tag">By Burey</a><span id="name_tag_michael"> & </span><a href="https://www.sololearn.com/Profile/1249360">Michael Ermishin (C00l Ha43r)</a></h1>    
             
             <div id='container_login'>
                 <input id='login_name' class="input" placeholder='User Name:'>
+                <br>
+                <input id='login_pass' class='input' placeholder='Password' value='Anonymous'>
+                <br>
                 <button id='btn_login' class='button'>Login</button>
             </div>
                         
@@ -34,7 +37,41 @@
                 <button id='btn_logout' class='button'>Logout</button>
                 <br><br>
                 
+                <table>
+                <tr>
+                    <td class='emoji_table' id='thumb_up'>&#x1f44d;</td>
+                    <td class='emoji_table' id='thumb_down'>&#x1f44e;</td>
+                    <td class='emoji_table' id='cursor_pointer'>&#x1f446;</td>
+                    <td class='emoji_table' id='emoji_tears'>&#x1f602;</td>
+                    <td class='emoji_table' id='emoji_cold_sweat'>&#x1f605;</td>
+                    <td class='emoji_table' id='emoji_grin'>&#x1f601;</td>
+                    <td class='emoji_table' id='emoji_cool'>&#x1f60e;</td>
+                    <td class='emoji_table' id='emoji_inlove'>&#x1f60d;</td>
+                </tr>
+                <tr>
+                    <td class='emoji_table' id='emoji_dizzy'>&#x1f635;</td>
+                    <td class='emoji_table' id='emoji_devil'>&#x1f608;</td>
+                    <td class='emoji_table' id='emoji_angry'>&#x1f620;</td>
+                    <td class='emoji_table' id='emoji_kissy'>&#x1f61a;</td>
+                    <td class='emoji_table' id='emoji_triumph'>&#x1f624;</td>
+                    <td class='emoji_table' id='emoji_crying'>&#x1f622;</td>
+                    <td class='emoji_table' id='emoji_>_<'>&#x1F61D;</td>
+                    <td class='emoji_table' id='emoji_OMG'>&#x1F631;</td>
+                </tr>
+                <tr> 
+                    <td class='emoji_table' id='emoji_hamburger'>&#x1F354;</td>
+                    <td class='emoji_table' id='emoji_pizza'>&#x1F355;</td>
+                    <td class='emoji_table' id='emoji_spaghetti'>&#x1F35D;</td>
+                    <td class='emoji_table' id='emoji_fries'>&#x1F35F;</td>
+                    <td class='emoji_table' id='emoji_cake'>&#x1F382;</td>
+                    <td class='emoji_table' id='emoji_doughnut'>&#x1F369;</td>
+                    <td class='emoji_table' id='emoji_clink_beers'>&#x1F37B;</td>
+                    <td class='emoji_table' id='emoji_tropical'>&#x1F379;</td>
+                    <td class='emoji_table' id='url_link'>URL</td>
+                </tr>
+                </table>
                 <textarea id='new_message' class="input" placeholder='Message:'></textarea>
+                
                 <br><br>
                 <button id='btn_post' class='button'>Post</button>
                 <button id='show_connected' class='button'>Connected Users:</button>
