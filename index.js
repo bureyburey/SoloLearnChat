@@ -9,6 +9,7 @@ var messages_ref;
 var am_online;
 var user_ref;
 var connected_users_count=0;
+var connected_users_list = [];
 var last_message_ref;
 var messages_loaded = false;
 var FIREBASE_ADDR = "https://sololearnfirebasechat-5bb04.firebaseio.com";
@@ -42,28 +43,29 @@ function init() {
       "hideMethod": "fadeOut"
     }
 
-            var notifyMe = function(message) {
-              // Let's check if the browser supports notifications
-              if (!("Notification" in window)) {
-                // alert("This browser does not support desktop notification");
-              }
-              // Let's check whether notification permissions have already been granted
-              else if (Notification.permission === "granted") {
+
+        var notifyMe = function(message) {
+          // Let's check if the browser supports notifications
+          if (!("Notification" in window)) {
+            // alert("This browser does not support desktop notification");
+          }
+          // Let's check whether notification permissions have already been granted
+          else if (Notification.permission === "granted") {
                 // If it's okay let's create a notification
-                var notification = new Notification(message.author + ' posted: ' + message.body);
-              }
-              // Otherwise, we need to ask the user for permission
-              else if (Notification.permission !== 'denied') {
-                Notification.requestPermission(function (permission) {
-                  // If the user accepts, let's create a notification
-                  if (permission === "granted") {
-                    var notification = new Notification(message.author + ' posted: ' + message.body);
-                  }
-                });
-              }
+            var notification = new Notification(message);
+            }
+             // Otherwise, we need to ask the user for permission
+            else if (Notification.permission !== 'denied') {
+            Notification.requestPermission(function (permission) {
+            // If the user accepts, let's create a notification
+            if (permission === "granted") {
+                var notification = new Notification(message);
+                }
+            });
+        }
           // At last, if the user has denied notifications, and you 
           // want to be respectful there is no need to bother them any more.
-        }
+    }
 
      var textToHtml = function(text) {
         text = escapeHtml(text);
@@ -119,7 +121,8 @@ function init() {
                 messages_ref = db_ref.child("chat_messages");
                 am_online = new Firebase(FIREBASE_ADDR+'/.info/connected');
                 user_ref = new Firebase(FIREBASE_ADDR+'/connected/'+loginName);
-
+                user_history_ref = new Firebase(FIREBASE_ADDR+'/user_last_logged/'+loginName);
+                user_history_ref.set(Firebase.ServerValue.TIMESTAMP);
                 // create listener when new user is logged in
                 am_online.on('value', function(snapshot) {
                     if (snapshot.val()) {
@@ -198,9 +201,11 @@ function init() {
     
         var snapLoadUsers = function(snapshot) {
             var usr_list = [];
+            
             snapshot.forEach(function(child) {
                 usr_list.push({username: "- "+child.key()+" -", time: child.val()});
             });
+            connected_users_list = usr_list;
             refreshConnectedUsers(usr_list);
         }
         
@@ -244,7 +249,13 @@ function init() {
             document.getElementById('container_login').style.display = 'block';
             document.getElementById('container_chat').style.display = 'none';
             user_ref.remove();
+            db_ref.off();
+            messages_ref.off();
+            am_online.off();
+            user_ref.off();
+            user_history_ref.off();
             messages_loaded = false;
+            
         }
         var chat = function(login, password) {
             document.getElementById('logged_user_name').innerHTML = 'Logged in as: <span id="username">' + login + "</span>";
@@ -271,8 +282,11 @@ function init() {
                     last_connected_index = i;
                 }
             }
-            if(list.length > connected_users_count)
+        if(list.length > connected_users_count && $('#chkbox_notify').is(':checked')){
+                
                toastr.success(list[last_connected_index].username, 'User Joined the chat:');
+                notifyMe(list[last_connected_index].username + "Joined the chat");
+            }
     
             connected_users_count = list.length;
         }
@@ -306,9 +320,14 @@ function init() {
             $(".loader").hide();
             
             if(messages_loaded === true && list[list.length-1].author != loginName){
+                messages_loaded = false;
+                
+                if($('#chkbox_notify').is(':checked')){
+                    
                 toastr.success(list[list.length-1].body, list[list.length-1].author+' Posted: ');
-                messages_loaded = false
-                notifyMe(list[list.length-1]);
+                notifyMe(list[list.length-1].author + ' posted: ' + list[list.length-1].body);
+                    
+                }
             }
             else
                 messages_loaded = true;
@@ -344,7 +363,6 @@ function init() {
         btn_logout.onclick = logout;
         btn_post.onclick = post;
         
-
     $(document).ready(function(){
             $(".emoji_table").on('click',function(){
                 var txt = $.trim($(this).text());
@@ -376,7 +394,26 @@ function init() {
             
          });
          
+         
+         
+         
+                 
+        var Bot_API = {
+             addMessageListener: function(func){
+                
+            },
+            
+            getConnectedUsers: connected_users_list,
+            
+            postMessage: function(msg){
+                
+            }
+            
+           
+        }
         
+        
+        //  document.write(Bot_API.getConnectedUsers)
     }
     catch (err) {
         alert("Error occured on initiating firebase chat");
