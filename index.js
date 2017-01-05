@@ -37,7 +37,7 @@ strform = {
 }
 
 // Create time formater module
-timeformat = {
+var timeformat = {
 	formats: {
 		project_default: 'SS:MM:HH mm/dd/yyyy',
 
@@ -51,8 +51,8 @@ timeformat = {
 
 	format: function(format, date)
 	{
-		isAlpha = s => s.toLowerCase() != s.toUpperCase();
-		isDigit = s => s.charCodeAt(0) >= 48 && s.charCodeAt(0) <= 57;
+		var isAlpha = s => s.toLowerCase() != s.toUpperCase();
+		var isDigit = s => s.charCodeAt(0) >= 48 && s.charCodeAt(0) <= 57;
 
 		// DATE
 		var fullYear = date.getFullYear();
@@ -163,7 +163,7 @@ timeformat = {
 
 		return dateString;
 	}
-}
+};
 
 // Create notification manager module
 var notificationManager = {};
@@ -182,7 +182,6 @@ var initNotificationManager = function() {
 		
 		// Check whether notification permissions have already been granted
 		// Otherwise, we need to ask the user for permission
-// 		console.log(Notification.permission);
 		if (Notification.permission === 'granted') new Notification(message);
 		else if (Notification.permission !== 'denied') Notification.requestPermission(function (status) {
 			new Notification(message);
@@ -387,11 +386,12 @@ var chat = {
 
 			// this will get fired on inital load as well as when ever there is a change in the data
 			
-			chat._messages_ref.on('child_removed', function(oldChildSnapshot) {
-			    key = oldChildSnapshot.key;
-			    $("#"+key).remove(); 
-            //   console.log('Child '+oldChildSnapshot.key()+' was removed');
-            });
+			chat._messages_ref.on('child_removed', function(target) {
+		    		var key = target.key;
+				// Delete element, using native functions. Works ~6 times faster than jQuery
+				var element = document.getElementById(key);
+				element.parentNode.remove(element);
+            		});
 			
 			chat._messages_ref.orderByChild("createTime").limitToLast(MESSAGES_TO_LOAD).on('value', function(snapshot) {
 				pageManager.showLoader();
