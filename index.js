@@ -24,8 +24,11 @@ var initNotificationManager = function() {
 		
 		// Check whether notification permissions have already been granted
 		// Otherwise, we need to ask the user for permission
-		if (Notification.permission === "granted") new Notification(message);
-		else if (Notification.permission !== 'denied') Notification.requestPermission();
+		console.log(Notification.permission);
+		if (Notification.permission === 'granted') new Notification(message);
+		else if (Notification.permission !== 'denied') Notification.requestPermission(function (status) {
+			new Notification(message);
+		});
 	}
 }
 
@@ -100,6 +103,8 @@ var initPageManager = function() {
 		containers[containerToShow].style.display = 'block';
 		containers[containerToHide].style.display = 'none';
 	};
+
+	pageManager._messages_loaded = false;
 	
 	// List of PUBLIC module functions
 	pageManager.showChatPage = function() {
@@ -108,40 +113,55 @@ var initPageManager = function() {
 	};
 
 	pageManager.showAuthPage = () => swapVisible('auth_page', 'chat_page');
-	pageManager.showMessageUpdate = () => swap_visible('message_update_form', 'message_create_form');
-	pageManager.showMessageCreate = () => swap_visible('message_create_form', 'message_update_form');
+	pageManager.showMessageUpdate = () => swapVisible('message_update_form', 'message_create_form');
+	pageManager.showMessageCreate = () => swapVisible('message_create_form', 'message_update_form');
 
-	pageManager.clearMessage = () => containers.new_message.innerHTML = '';
+	pageManager.clearMessage = () => containers.new_message.value = '';
 	pageManager.getMessage = () => containers.new_message.value;
+	pageManager.setMessage = text => containers.new_message.value = text;
 
 	pageManager.showLoader = () => containers.loader.style.display = 'block';
 	pageManager.hideLoader = () => containers.loader.style.display = 'none';
 
 	pageManager.updateMessages = function(messages) {
 		var formMessage = function(message) {
-			var html = '<div class="message">';
-			html += '<div class="message_details">';
+			var html = '<div class="message_details">';
 			html += '<span class="message_author">@{' + message.author + '}</span>';
 			
-			html += '<span class="user_controls" id="' + message.id + '"">';
+			html += '<span class="user_controls" data-messageId="' + message.id + '">';
 			html += '<span class="user_controls" name="edit_message">&#x270F;</span>';
 			html += '<span class="user_controls" name="delete_message">&#x1f5d1;</span>';
 			html += '</span>';
 			
 			// TODO: Add time formater module from my own project
-			html += ' <span class="message_time"></br>at ' + message.time + '</span></div>';
+			html += ' <span class="message_time"></br>at ' + message.createTime + '</span></div>';
 			html += '<div class="message_body">' + message.body + "</div>";
-			html += '<div class="message_actions"><span class="message_reply"></span></div></div>';
+			html += '<div class="message_actions"><span class="message_reply"></span></div>';
 
 			return html;
 		}
 
+		var formMessageFull = message => '<div class="message" id="' + message.id + '">' + formMessage(message) + "</div>";
+
 		var message_list = containers.message_list;
 
-		for (var msgId in messages)
-			message_list.innerHTML = formMessage(messages[msgId]) + message_list.innerHTML;
+		if (this._messages_loaded)
+		{
+			for (var msgId in messages)
+				if (messages[msgId].add_mode === 'new')
+					message_list.innerHTML = formMessageFull(messages[msgId]) + message_list.innerHTML;
 
-		pageManager.hideLoader();
+			for (var msgId in messages)
+				if (messages[msgId].add_mode === 'edit')
+					document.getElementById(messages[msgId].id).innerHTML = formMessage(messages[msgId]);
+		}
+		else
+		{
+			for (var msgId in messages)
+				message_list.innerHTML = formMessageFull(messages[msgId]) + message_list.innerHTML;
+		}
+
+		this._messages_loaded = true;
 	}
 
 	pageManager.updateConnectedUsers = function(users) {
@@ -155,11 +175,11 @@ var initPageManager = function() {
 		tbl.find("tr:gt(0)").remove();
 		
 		for (var i = 0; i < users.length; ++i) {
-			var html = "<tr class='user_row'><td class='username'>" + users[i].username + "</td></tr>";
+			var html = "<tr class='user_row'><td class='username'>" + users[i].name + "</td></tr>";
 			tbl.append(html);
 		}
 		
-		var username = users[users.length - 1].username;
+		var username = users[users.length - 1].name;
 		notificationManager.showNotification(username + " joined the chat");
 	}
 };
@@ -197,59 +217,65 @@ var chat = {
 			am_online = firebase.database().ref(".info/connected");
 			user_ref = firebase.database().ref('/connected/' + user.name);
 
+			pageManager._messages_loaded = false;
+
 			// create listener when new user is logged in
 			am_online.on('value', function(snapshot) {
 				if (!snapshot.val()) return;
 				
 				user_ref.onDisconnect().remove();
 				user_ref.set(firebase.database.ServerValue.TIMESTAMP);
+			});
 
-				// this will get fired on inital load as well as when ever there is a change in the data
-				chat._messages_ref.orderByChild("createTime").limitToLast(MESSAGES_TO_LOAD).on('value', function(snapshot) {
-					pageManager.showLoader();
+			// this will get fired on inital load as well as when ever there is a change in the data
+			chat._messages_ref.orderByChild("createTime").limitToLast(MESSAGES_TO_LOAD).on('value', function(snapshot) {
+				pageManager.showLoader();
 
-					var messages = [];
-					snapshot.forEach(child => { messages.push({
-						id: child.key,
-						author: markdown.specToEntities(child.val().author),
-						body: markdown.textToHtml(child.val().body),
-						createTime: child.val().createTime,
-						editTime: child.val().editTime
-					})});
+				var messages = [];
+				snapshot.forEach(child => { messages.push({
+					id: child.key,
+					author: markdown.specToEntities(child.val().author),
+					body: markdown.textToHtml(child.val().body),
+					createTime: child.val().createTime,
+					editTime: child.val().editTime
+				})});
 
-					var message_ids = chat.messages.map(msg => msg.id);
-					var new_messages = messages.filter(msg =>
-						(msg.createTime > chat.last_message_time
-						|| (msg.editTime != msg.createTime && msg.editTime > chat._message_map[msg.id].editTime))
-						&& (!chat._send_message || msg.author != chat.current_user.name)
-					);
+				var message_ids = chat.messages.map(msg => msg.id);
+				var new_messages = messages.filter(msg =>
+					(msg.createTime > chat.last_message_time
+					|| (msg.editTime != msg.createTime && msg.editTime > chat._message_map[msg.id].editTime))
+					&& (!chat._send_message || msg.author != markdown.specToEntities(chat.current_user.name))
+				);
 
-					new_messages.forEach(message => {
-						chat._message_map[message.id] = message;
-						message.add_mode = message.editTime === message.createTime ? 'new' : 'edit';
-					});
-
-					chat._send_message = false;
-					if (new_messages.length > 0)
-					{
-						chat.messages = chat.messages.concat(new_messages);
-						chat.last_message_time = chat.messages[chat.messages.length - 1].createTime;
-						pageManager.updateMessages(new_messages);
-						API._updateMessages(new_messages);
-					}
+				new_messages.forEach(message => {
+					chat._message_map[message.id] = message;
+					message.add_mode = message.editTime === message.createTime ? 'new' : 'edit';
 				});
 
+				chat._send_message = false;
+				if (new_messages.length > 0)
+				{
+					chat.messages = chat.messages.concat(new_messages);
+					chat.last_message_time = chat.messages[chat.messages.length - 1].createTime;
+					pageManager.updateMessages(new_messages);
+					API._updateMessages(new_messages);
+				}
 
-				db_ref.ref("connected").on("value", function(snapshot) {
-					chat.online_users = [];
-					snapshot.forEach(child => chat.online_users.push({
-						name: child.key,
-						time: child.val()
-					}));
-					
-					pageManager.updateConnectedUsers(chat.online_users);
-					API._updateConnectedUsers(chat.online_users);
-				});
+				pageManager.hideLoader();
+			});
+
+
+			db_ref.ref("connected").on("value", function(snapshot) {
+				chat.online_users = [];
+				snapshot.forEach(child => chat.online_users.push({
+					name: child.key,
+					time: child.val()
+				}));
+				
+				console.log(chat.online_users);
+
+				pageManager.updateConnectedUsers(chat.online_users);
+				API._updateConnectedUsers(chat.online_users);
 			});
 
 			pageManager.showChatPage();
@@ -285,7 +311,7 @@ var chat = {
 		firebase.auth().signOut().then(function() {
 			user_ref.remove();
 
-			this._messages_ref.off();
+			chat._messages_ref.off();
 			am_online.off();
 			user_ref.off();
 		});
@@ -302,7 +328,6 @@ var chat = {
 			'createTime': firebase.database.ServerValue.TIMESTAMP,
 			'editTime'  : firebase.database.ServerValue.TIMESTAMP
 		};
-		console.log(formed_message);
 		this._messages_ref.push(formed_message);
 	},
 
@@ -405,8 +430,6 @@ function init() {
 			toastr.error('Message body cannot be empty', 'Error!');
 			return;
 		}
-		
-		
 
 		chat.sendMessage(message);
 		message_input.value = '';
@@ -453,7 +476,6 @@ function init() {
 	});
 	
 	$(".emoji_table").on('click',function() {
-		console.log(this);
 		var txt = this.innerHTML;
 		var box = document.getElementById('new_message');
 
@@ -464,7 +486,7 @@ function init() {
 	
 	$(document).on('click','.user_controls',function(event) {
 		event.stopImmediatePropagation();
-		var id = $(this).parent().attr("id");
+		var id = $(this).parent().attr("data-messageId");
 		var name = $(this).attr("name");
 		var message_author = $(this).parent().parent().find('.message_author').text();
 		var message_body = $(this).parent().parent().parent().find('.message_body').text();
@@ -477,11 +499,11 @@ function init() {
 			
 		if(name === 'edit_message') {
 			pageManager.showMessageUpdate();
-			pageManager.clearMessage();
+			pageManager.setMessage(markdown.htmlToText(message_body));
 		}
 		else if(name === 'delete_message') {
 			if(confirm("Delete this message?"))
-				this._messages_ref.child(id).remove();
+				chat._messages_ref.child(id).remove();
 		}
 	});
 }
