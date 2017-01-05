@@ -21,6 +21,6 @@ strform = {
 	pad: function(obj, filler, padding)
 	{
 		var str = obj.toString();
-		return this.repeat(filler, str.length - padding) + str;
+		return this.repeat(filler, padding - str.length) + str;
 	}
-}
+};
