@@ -182,7 +182,7 @@ var initNotificationManager = function() {
 		
 		// Check whether notification permissions have already been granted
 		// Otherwise, we need to ask the user for permission
-		console.log(Notification.permission);
+// 		console.log(Notification.permission);
 		if (Notification.permission === 'granted') new Notification(message);
 		else if (Notification.permission !== 'denied') Notification.requestPermission(function (status) {
 			new Notification(message);
@@ -288,7 +288,7 @@ var initPageManager = function() {
 			
 			html += '<span class="user_controls" data-messageId="' + message.id + '">';
 			html += '<span class="user_controls" name="edit_message">&#x270F;</span>';
-			html += '<span class="user_controls" name="devare_message">&#x1f5d1;</span>';
+			html += '<span class="user_controls" name="delete_message">&#x1f5d1;</span>';
 			html += '</span>';
 			
 			var formated_time = timeformat.format(timeformat.formats.project_default, new Date(message.createTime));
@@ -430,7 +430,7 @@ var chat = {
 					time: child.val()
 				}));
 
-				console.log(chat.online_users);
+				// console.log(chat.online_users);
 
 				pageManager.updateConnectedUsers(chat.online_users);
 				API._updateConnectedUsers(chat.online_users);
@@ -642,6 +642,11 @@ function init() {
 		else box.value += txt;
 	});
 	
+	$(document).on('click',".message_author",function(){
+        var txt = $.trim($(this).text());
+        var box = $("#new_message");
+        box.val(box.val() + txt);
+    });
 	
 	$(document).on('click','.user_controls',function(event) {
 		event.stopImmediatePropagation();
