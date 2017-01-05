@@ -386,6 +386,13 @@ var chat = {
 			});
 
 			// this will get fired on inital load as well as when ever there is a change in the data
+			
+			chat._messages_ref.on('child_removed', function(oldChildSnapshot) {
+			    key = oldChildSnapshot.key;
+			    $("#"+key).remove(); 
+            //   console.log('Child '+oldChildSnapshot.key()+' was removed');
+            });
+			
 			chat._messages_ref.orderByChild("createTime").limitToLast(MESSAGES_TO_LOAD).on('value', function(snapshot) {
 				pageManager.showLoader();
 
