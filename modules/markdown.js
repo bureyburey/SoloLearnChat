@@ -8,19 +8,19 @@ var markdown = {
 		' ': '&nbsp;'
 	},
 		
-	textToHtml: function(text) {
-		text = this.specToEntities(text);
-		text = text.replace(/\n/g, '<br>');
+	markdownToHtml: function(markdown) {
+		var html = this.specToEntities(markdown);
+		html = html.replace(/\n/g, '<br>');
 		
-		text = text.replace(
+		html = html.replace(
 			/([^\\]|^)\[url:([^\]]+)\]\(([^)]+)\)/g,
 			(_, smb, name, url) => smb + '<a href="' + url + '">' + name + '</a>'
 		);
 		
-		text = text.replace(/([^\\]|^)\*\*(.+?)\*\*/g, (_, smb, content) => smb + '<b>' + content + '</b>');
-		text = text.replace(/([^\\]|^)__(.+?)__/g, (_, smb, content) => smb + '<i>' + content + '</i>');
+		html = html.replace(/([^\\]|^)\*\*(.+?)\*\*/g, (_, smb, content) => smb + '<b>' + content + '</b>');
+		html = html.replace(/([^\\]|^)__(.+?)__/g, (_, smb, content) => smb + '<i>' + content + '</i>');
 		
-		text = text.replace(/\\(.)/g, (_, character) => character);
+		html = html.replace(/\\(.)/g, (_, character) => character);
 		
 		return text;
 	},
@@ -40,7 +40,23 @@ var markdown = {
 		return text.replace(pattern, k => entToSpecMap[k]);
 	},
 	
-	htmlToText: function(html) {
-		return html.replace(/<.*?>/g, '');
+	htmlToText: html => html.replace(/<.*?>/g, ''),
+
+	htmlToMarkdown: function(html) {
+		var markdown = this.entitiesToSpec(html);
+
+		markdown = markdown.replace(/\*\*/g, '\\**');
+		markdown = markdown.replace(/\_\_/g, '\\__');
+		markdown = markdown.replace(/\[[^:\]]+:[^\]]+\](.*?)/g, data => '\\' + data);
+
+		// Simple convertion
+		markdown = html.replace(/<br>/g, '\n');
+		markdown = markdown.replace(/<b>(.*?)<\/b>/g, (_, content) => '**' + content + '**');
+		markdown = markdown.replace(/<i>(.*?)<\/i>/g, (_, content) => '__' + content + '__');
+
+		// Convertion of special objects
+		markdown = markdown.replace(/<a href="(.*?)">(.*?)<\/a>/g, (_, link, name) => '[url:' + name + '](' + link + ')');
+
+		return markdown;
 	}
 };
