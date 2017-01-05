@@ -1,6 +1,6 @@
 var timeformat = {
 	formats: {
-		project_default: 'SS:MM:HH mm/dd/yyyy',
+		project_default: 'mm/dd/yyyy HH:MM:SS',
 
 		default: {
 			datetime: 'yyy-mm-dd HH:MM:SS',
