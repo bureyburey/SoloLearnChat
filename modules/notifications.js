@@ -20,4 +20,4 @@ var initNotificationManager = function() {
 			new Notification(message);
 		});
 	}
-}
+};
