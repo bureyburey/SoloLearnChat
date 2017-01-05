@@ -1,682 +1,158 @@
-// Execute init function on full document load
-$(init);
-
-//var FIREBASE_ADDR = "https://sololearnfirebasechat-5bb04.firebaseio.com";
-
-var global_msg;
-var msg_location_y;
-
-var MESSAGES_TO_LOAD = 50;
-
-// Create time formater module
-strform = {
-	repeat: function(obj, count)
-	{
-		if (count <= 0) return '';
-		if (count == 1) return obj.toString();
-
-		var result = '';
-		var pattern = obj.toString();
-
-		while (count > 1) {
-	        if (count % 2 == 1)
-	        	result += pattern;
-
-	        count = Math.floor(count / 2);
-	        pattern += pattern;
-	    }
-
-	    return result + pattern;
-	},
-
-	pad: function(obj, filler, padding)
-	{
-		var str = obj.toString();
-		return this.repeat(filler, str.length - padding) + str;
-	}
-}
-
-// Create time formater module
-timeformat = {
-	formats: {
-		project_default: 'SS:MM:HH mm/dd/yyyy',
-
-		default: {
-			datetime: 'yyy-mm-dd HH:MM:SS',
-			datetime12: 'yyy-mm-dd HH12:MM:SS AMPM',
-			date: 'yyy-mm-dd',
-			time: 'HH:MM:SS'
-		},
-	},
-
-	format: function(format, date)
-	{
-		isAlpha = s => s.toLowerCase() != s.toUpperCase();
-		isDigit = s => s.charCodeAt(0) >= 48 && s.charCodeAt(0) <= 57;
-
-		// DATE
-		var fullYear = date.getFullYear();
-		var year = fullYear % 100;
-
-		var month = date.getMonth() + 1;
-		var day = date.getDate();
-		var dayOfWeek = date.getDay();
-
-		// TIME
-		var hours24 = date.getHours();
-		var hours12 = hours24 % 12;
-
-		var minutes = date.getMinutes();
-		var seconds = date.getSeconds();
-
-		// SPECIAL
-		var ampm = hours24 >= 12 ? 'pm' : 'am';
-		var AMPM = hours24 >= 12 ? 'PM' : 'AM';
-
-		var monthNameFull = [
-			'January',
-			'February',
-			'March',
-			'April',
-			'May',
-			'June',
-			'July',
-			'August',
-			'September',
-			'October',
-			'November',
-			'December',
-			'Additional month for developers'
-		][month - 1];
-		var monthName = monthNameFull.substring(0, 3);
-
-		var dayNameFull = [
-			'Sunday',
-			'Monday',
-			'Tuesday',
-			'Wednessday',
-			'Thursday',
-			'Friday',
-			'Saturday'
-		][dayOfWeek];
-		var dayName = dayNameFull.substring(0, 3);
-
-		var formated = {
-			// Special attributes formation
-			'ampm' : ampm,
-			'AMPM' : AMPM,
-
-			'MNF'  : monthNameFull,
-			'MN'   : monthName,
-			'DNF'  : dayNameFull,
-			'DN'   : dayName,
-
-			// Years formation
-			'yyyy' : strform.pad(fullYear, '0', 4),
-			'yyy'  : fullYear.toString(),
-			'yy'   : strform.pad(year, '0', 2),
-			'y'    : year.toString(),
-
-			// Months formation
-			'mm'   : strform.pad(month, '0', 2),
-			'm'    : month.toString(),
-
-			'dd'   : strform.pad(day, '0', 2),
-			'd'    : day.toString(),
-
-			// Time formation
-			'HH24' : strform.pad(hours24, '0', 2),
-			'HH12' : strform.pad(hours24, '0', 2),
-			'HH'   : strform.pad(hours12, '0', 2),
-
-			'H24'  : hours24.toString(),
-			'H12'  : hours12.toString(),
-			'H'    : hours24.toString(),
-
-
-			'MM'   : strform.pad(minutes, '0', 2),
-			'M'    : minutes.toString(),
-
-			'SS'   : strform.pad(seconds, '0', 2),
-			'S'    : seconds.toString()
-		};
-
-		var dateString = '';
-		var part = '';
-		for (var index = 0; index < format.length; ++index)
-		{
-			if (!isAlpha(format[index]) && !isDigit(format[index]))
-			{
-				if (formated[part]) dateString += formated[part];
-				else dateString += part;
-
-				part = '';
-				dateString += format[index];
-
-				continue;
-			}
-
-			part += format[index];
-		}
-		if (formated[part]) dateString += formated[part];
-		else dateString += part;
-
-		return dateString;
-	}
-}
-
-// Create notification manager module
-var notificationManager = {};
-var initNotificationManager = function() {
-	var notify_message = document.getElementById('notify_message');
-	var notify_vibrate = document.getElementById('notify_vibrate');
-
-	notificationManager.showNotification = function(message, title) {
-		if('vibrate' in window && notify_vibrate.checked)
-			navigator.vibrate(1000);
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Firebase chat</title>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
+		<script src="https://code.jquery.com/ui/1.10.4/jquery-ui.js"></script>
 		
-		// If the browser does not supports notifications, don not run next code
-		if (!('Notification' in window) || !notify_message.checked) return;
-
-		if (title != undefined) toastr.success(message, title);
+		<link href="https://code.jquery.com/ui/1.10.4/themes/ui-lightness/jquery-ui.css" rel="stylesheet">
 		
-		// Check whether notification permissions have already been granted
-		// Otherwise, we need to ask the user for permission
-// 		console.log(Notification.permission);
-		if (Notification.permission === 'granted') new Notification(message);
-		else if (Notification.permission !== 'denied') Notification.requestPermission(function (status) {
-			new Notification(message);
-		});
-	}
-}
+		<script src="https://www.gstatic.com/firebasejs/3.6.4/firebase.js"></script>
 
-// Create markdown module
-var markdown = {
-	htmlEntitiesMap: {
-		'&': '&amp;',
-		'<': '&lt;',
-		'>': '&gt;',
-		'"': '&quot;',
-		"'": '&#039;',
-		' ': '&nbsp;'
-	},
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+		<link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet"/>
 		
-	textToHtml: function(text) {
-		text = this.specToEntities(text);
-		text = text.replace(/\n/g, '<br>');
-		
-		text = text.replace(
-			/([^\\]|^)\[url:([^\]]+)\]\(([^)]+)\)/g,
-			(_, smb, name, url) => smb + '<a href="' + url + '">' + name + '</a>'
-		);
-		
-		text = text.replace(/([^\\]|^)\*\*(.+?)\*\*/g, (_, smb, content) => smb + '<b>' + content + '</b>');
-		text = text.replace(/([^\\]|^)__(.+?)__/g, (_, smb, content) => smb + '<i>' + content + '</i>');
-		
-		text = text.replace(/\\(.)/g, (_, character) => character);
-		
-		return text;
-	},
-	
-	specToEntities: function(text) {
-		var pattern = new RegExp('/[' + Object.keys(this.htmlEntitiesMap).join('') + ']/', 'g');
-		return text.replace(pattern, k => this.htmlEntitiesMap[k]);
-	},
-	
-	entitiesToSpec: function(text) {
-		var entToSpecMap = Object.keys(this.htmlEntitiesMap).reduce(function(obj, key){
-			obj[data[key]] = key;
-			return obj;
-		}, {});
-		
-		var pattern = new RegExp('/[' + Object.keys(entToSpecMap).join('') + ']/', 'g');
-		return text.replace(pattern, k => entToSpecMap[k]);
-	},
-	
-	htmlToText: function(html) {
-		return html.replace(/<.*?>/g, '');
-	}
-};
-
-// Create page manager module
-var pageManager = {};
-var initPageManager = function() {
-	// Containers
-	var containers = {
-		'chat_page': document.getElementById('container_chat'),
-		'auth_page': document.getElementById('container_login'),
-
-		'new_message': document.getElementById('new_message'),
-		'message_create_form': document.getElementById('message_create_form'),
-		'message_update_form': document.getElementById('message_update_form'),
-		'message_list': document.getElementById('message_list'),
-
-		'username': document.getElementById('username'),
-
-		'loader': document.getElementById('loader')
-	}
-	
-	// List of PRIVATE module functions
-	var swapVisible = function(containerToShow, containerToHide) {
-		containers[containerToShow].style.display = 'block';
-		containers[containerToHide].style.display = 'none';
-	};
-
-	pageManager._messages_loaded = false;
-	
-	// List of PUBLIC module functions
-	pageManager.showChatPage = function() {
-		swapVisible('chat_page','auth_page');
-		containers.username.innerHTML = chat.current_user.name;
-	};
-
-	pageManager.showAuthPage = () => swapVisible('auth_page', 'chat_page');
-	pageManager.showMessageUpdate = () => swapVisible('message_update_form', 'message_create_form');
-	pageManager.showMessageCreate = () => swapVisible('message_create_form', 'message_update_form');
-
-	pageManager.clearMessage = () => containers.new_message.value = '';
-	pageManager.getMessage = () => containers.new_message.value;
-	pageManager.setMessage = text => containers.new_message.value = text;
-
-	pageManager.showLoader = () => containers.loader.style.display = 'block';
-	pageManager.hideLoader = () => containers.loader.style.display = 'none';
-
-	pageManager.updateMessages = function(messages) {
-		var formMessage = function(message) {
-			var html = '<div class="message_details">';
-			html += '<span class="message_author">@{' + message.author + '}</span>';
+		<link rel="stylesheet" href="index.css">
+		<script src="index.js"></script>
+	</head>
+	<body>
+		<div id='container'>
+			<div id='about_dialog' title='About'>Firebase Chat v3.0<br>Created by<br>Burey &amp; Michael Ermishin</div>
 			
-			html += '<span class="user_controls" data-messageId="' + message.id + '">';
-			html += '<span class="user_controls" name="edit_message">&#x270F;</span>';
-			html += '<span class="user_controls" name="delete_message">&#x1f5d1;</span>';
-			html += '</span>';
+			<div id='table_connected_users_container' title='Who is online?'>
+				<table id='table_connected_users'><tr><th style='color:green;'>Connected Users</th></tr></table>
+			</div>
 			
-			var formated_time = timeformat.format(timeformat.formats.project_default, new Date(message.createTime));
-			html += ' <span class="message_time"></br>at ' + formated_time + '</span></div>';
-			html += '<div class="message_body">' + message.body + "</div>";
-			html += '<div class="message_actions"><span class="message_reply"></span></div>';
-
-			return html;
-		}
-
-		var formMessageFull = message => '<div class="message" id="' + message.id + '">' + formMessage(message) + "</div>";
-
-		var message_list = containers.message_list;
-
-		if (this._messages_loaded)
-		{
-			for (var msgId in messages)
-				if (messages[msgId].add_mode === 'new')
-					message_list.innerHTML = formMessageFull(messages[msgId]) + message_list.innerHTML;
-
-			for (var msgId in messages)
-				if (messages[msgId].add_mode === 'edit')
-					document.getElementById(messages[msgId].id).innerHTML = formMessage(messages[msgId]);
-		}
-		else
-		{
-			for (var msgId in messages)
-				message_list.innerHTML = formMessageFull(messages[msgId]) + message_list.innerHTML;
-		}
-
-		this._messages_loaded = true;
-	}
-
-	pageManager.updateConnectedUsers = function(users) {
-		// Sort users by join time
-		users.sort((a, b) => a.time - b.time);
-
-		$('#show_connected').text("Connected Users: " + users.length);
-
-		// clean the table except the first row
-		var tbl = $("#table_connected_users");
-		tbl.find("tr:gt(0)").remove();
-		
-		for (var i = 0; i < users.length; ++i) {
-			var html = "<tr class='user_row'><td class='username'>" + users[i].name + "</td></tr>";
-			tbl.append(html);
-		}
-		
-		var username = users[users.length - 1].name;
-		notificationManager.showNotification(username + " joined the chat");
-	}
-};
-
-var chat = {
-	_send_message: false,
-	_messages_ref: null,
-
-	_message_map: {},
-
-	online_users: [],
-	messages: [],
-	last_message_time: 0,
-
-	current_user: null,
-	
-	
-	init: function(user, mode) {
-		chat.current_user = user;
-
-		// force web sockets to prevent XMLHttpRequest warning    
-		firebase.database.INTERNAL.forceWebSockets();
-		var db_ref = firebase.database();
-		
-		var onSuccess = function(user) {
-			user.name = chat.current_user.name;
-			chat.current_user = user;
+			<h1 class="headline">
+				Firebase Chat <span class='about'>*<u id='about'>About</u>*</span><br>
+				<a href="https://www.sololearn.com/Profile/197327" id="name_tag">By Burey</a>
+				&nbsp;&amp;&nbsp;
+				<a href="https://www.sololearn.com/Profile/1249360" id="name_tag_michael">Michael Ermishin (C00l Ha43r)</a>
+			</h1>
 			
-			db_ref.ref("user_list").child(user.uid).set({
-				username: user.name,
-				lastOnline: firebase.database.ServerValue.TIMESTAMP
-			});
-		
-			chat._messages_ref = db_ref.ref("chat_messages");
-			am_online = firebase.database().ref(".info/connected");
-			user_ref = firebase.database().ref('/connected/' + user.name);
-
-			pageManager._messages_loaded = false;
-
-			// create listener when new user is logged in
-			am_online.on('value', function(snapshot) {
-				if (!snapshot.val()) return;
+			<div id='container_login'>
+					<input id='login_name' class="input" placeholder='User Name:'><br><br>
+					<input id='login_pass' class='input' placeholder='Password:' type='text'><br><br>
+					<label><input id='show_password' type='checkbox' checked> Show Password</label>
+					<!--<label><input id='chk_remember_me' type='checkbox'> Remember Me</label>-->
+					<br><br>
+					
+					<button id='btn_login' class='button'>Sign in</button>
+					<button id='btn_new_user' class='button'>Register</button>
+					<br><br><br>
+					
+					<div class ='input' style="border-color: red">
+						Notice:<br>
+						<ol>
+							<li>New chat supports user authentication</li>
+							<li>First time users: pick a username (no spaces like in the old chat) and password you can remember
+							<li>Those will be used for future authentication and enable you to edit/delete your own messages
+						</ol>
+					</div>
+			</div>
+			
+			
+			<div id='container_chat' style='display:none'>
+				<label id='logged_user_name'>Logged in as: <span id="username"></span></label>
+				<button id='btn_logout' class='button'>Logout</button>
+				<br><br>
 				
-				user_ref.onDisconnect().remove();
-				user_ref.set(firebase.database.ServerValue.TIMESTAMP);
-			});
-
-			// this will get fired on inital load as well as when ever there is a change in the data
+				<label class='input'>
+					<input id='notify_message' type='checkbox' checked>Notifications
+					<input id='notify_vibrate' type='checkbox'>Vibrate
+				</label>
+				<br><br>
+				
+				<table>
+					<tr>
+						<td class='emoji_table' id='thumb_up'>&#x1f44d;</td>
+						<td class='emoji_table' id='thumb_down'>&#x1f44e;</td>
+						<td class='emoji_table' id='cursor_pointer'>&#x1f446;</td>
+						<td class='emoji_table' id='emoji_tears'>&#x1f602;</td>
+						<td class='emoji_table' id='emoji_cold_sweat'>&#x1f605;</td>
+						<td class='emoji_table' id='emoji_grin'>&#x1f601;</td>
+						<td class='emoji_table' id='emoji_cool'>&#x1f60e;</td>
+						<td class='emoji_table' id='emoji_inlove'>&#x1f60d;</td>
+						<td class='emoji_table' id='emoji_sleepy'>&#x1F634;</td>
+						<td class='emoji_table' id='emoji_neutral'>&#x1F611;</td>
+						<td class='emoji_table' id='emoji_flushed'>&#x1F633;</td>
+						<td class='emoji_table' id='emoji_tongue'>&#x1F61B;</td>
+						<td class='emoji_table' id='emoji_grimacing'>&#x1F62C;</td>
+						<td class='emoji_table' id='emoji_heart'>&#x1F497;</td>
+					</tr>
+					<tr>
+						<td class='emoji_table' id='emoji_dizzy'>&#x1f635;</td>
+						<td class='emoji_table' id='emoji_angel'>&#x1F607;</td>
+						<td class='emoji_table' id='emoji_devil'>&#x1f608;</td>
+						<td class='emoji_table' id='emoji_angry'>&#x1f620;</td>
+						<td class='emoji_table' id='emoji_kissy'>&#x1f61a;</td>
+						<td class='emoji_table' id='emoji_triumph'>&#x1f624;</td>
+						<td class='emoji_table' id='emoji_crying'>&#x1f622;</td>
+						<td class='emoji_table' id='emoji_waterfall_tears'>&#x1F62D;</td>
+						<td class='emoji_table' id='emoji_>_<'>&#x1F61D;</td>
+						<td class='emoji_table' id='emoji_OMG'>&#x1F631;</td>
+						<td class='emoji_table' id='emoji_poo'>&#x1F4A9;</td>
+						<td class='emoji_table' id='emoji_cow'>&#x1F404;</td>
+						<td class='emoji_table' id='emoji_dash'>&#x1F4A8;</td>
+						<td class='emoji_table' id='emoji_plant'>&#x1F33E;</td>
+					</tr>
+					<tr>
+						<td class='emoji_table' id='emoji_hamburger'>&#x1F354;</td>
+						<td class='emoji_table' id='emoji_fries'>&#x1F35F;</td>
+						<td class='emoji_table' id='emoji_pizza'>&#x1F355;</td>
+						<td class='emoji_table' id='emoji_spaghetti'>&#x1F35D;</td>
+						<td class='emoji_table' id='emoji_riceball'>&#x1F358;</td>
+						<td class='emoji_table' id='emoji_cake'>&#x1F382;</td>
+						<td class='emoji_table' id='emoji_doughnut'>&#x1F369;</td>
+						<td class='emoji_table' id='emoji_clink_beers'>&#x1F37B;</td>
+						<td class='emoji_table' id='emoji_tropical'>&#x1F379;</td>
+						<td class='emoji_table' id='emoji_balloon'>&#x1F388;</td>
+						<td class='emoji_table' id='emoji_party_popper'>&#x1F389;</td>
+						<td class='emoji_table' id='emoji_confetti_ball'>&#x1F38A;</td>
+						<td></td>
+						<td class='emoji_table' id='url_link'>URL</td>
+					</tr>
+				</table>
+				
+				<textarea id='new_message' rows='4' cols='30' class="input" placeholder='Message:'></textarea>
+				<br><br>
+				
+				<div id='message_create_form'>
+					<button id='btn_new_post' class='button'>Post</button>
+					<button id='show_connected' class='button'>Connected Users:</button>
+				</div>
+				
+				<div id='message_update_form' style='display:none'>
+					<button id='btn_update_post' class='button'>Update</button>
+					<button id='btn_update_cancel' class='button'>Cancel</button>
+				</div>
+				
+				<div id='message_list'></div>
+				<div id="loader"></div>
+			</div>
+		</div>
 			
-			chat._messages_ref.on('child_removed', function(oldChildSnapshot) {
-			    key = oldChildSnapshot.key;
-			    $("#"+key).remove(); 
-            //   console.log('Child '+oldChildSnapshot.key()+' was removed');
-            });
+		<script>
+			var config = {
+				apiKey: "AIzaSyBJHstfaR2LClIae1c6iAt9csjeQGFuaAM",
+				authDomain: "sololearnfirebasechat-5bb04.firebaseapp.com",
+				databaseURL: "https://sololearnfirebasechat-5bb04.firebaseio.com",
+				storageBucket: "sololearnfirebasechat-5bb04.appspot.com",
+				messagingSenderId: "847331313248"
+			};
 			
-			chat._messages_ref.orderByChild("createTime").limitToLast(MESSAGES_TO_LOAD).on('value', function(snapshot) {
-				pageManager.showLoader();
-
-				var messages = [];
-				snapshot.forEach(child => { messages.push({
-					id: child.key,
-					author: markdown.specToEntities(child.val().author),
-					body: markdown.textToHtml(child.val().body),
-					createTime: child.val().createTime,
-					editTime: child.val().editTime
-				})});
-
-				var message_ids = chat.messages.map(msg => msg.id);
-				var new_messages = messages.filter(msg =>
-					(msg.createTime > chat.last_message_time
-					|| (msg.editTime != msg.createTime && msg.editTime > chat._message_map[msg.id].editTime))
-					&& (!chat._send_message || msg.author != markdown.specToEntities(chat.current_user.name))
-				);
-
-				new_messages.forEach(message => {
-					chat._message_map[message.id] = message;
-					message.add_mode = message.editTime === message.createTime ? 'new' : 'edit';
-				});
-
-				chat._send_message = false;
-				if (new_messages.length > 0)
-				{
-					chat.messages = chat.messages.concat(new_messages);
-					chat.last_message_time = chat.messages[chat.messages.length - 1].createTime;
-					pageManager.updateMessages(new_messages);
-					API._updateMessages(new_messages);
-				}
-
-				pageManager.hideLoader();
-			});
-
-
-			db_ref.ref("connected").on("value", function(snapshot) {
-				chat.online_users = [];
-				snapshot.forEach(child => chat.online_users.push({
-					name: child.key,
-					time: child.val()
-				}));
-
-				// console.log(chat.online_users);
-
-				pageManager.updateConnectedUsers(chat.online_users);
-				API._updateConnectedUsers(chat.online_users);
-			});
-
-			pageManager.showChatPage();
-		};
-
-		var auth;
-		if(mode === 'register')
-			auth = firebase.auth().createUserWithEmailAndPassword(user.name + "@nomail.com", user.password);
-		else if (mode === 'login')
-			auth = firebase.auth().signInWithEmailAndPassword(user.name + "@nomail.com", user.password);
-		else return toastr.error('Unknown login mode', 'Error!');
-
-		auth.then(onSuccess).catch(function(error) {
-			toastr.error(error.message, 'Error #' + error.code);
-		});
-	},
-	
-	login: function(name, pass, mode) {
-		var user = {
-			name: name,
-			password: pass
-		};
+			firebase.initializeApp(config);
+		</script>
 		
-		if (user.name.length < 2) {
-			toastr.error('Name should contains atleast 2 symbols', 'Error!');
-			return;
-		}
-		
-		this.init(user, mode);
-	},
-
-	logout: function() {
-		firebase.auth().signOut().then(function() {
-			user_ref.remove();
-
-			chat._messages_ref.off();
-			am_online.off();
-			user_ref.off();
-		});
-
-		pageManager.showAuthPage();
-	},
-
-	sendMessage: function(message) {
-		this._send_message = true;
-		var formed_message = {
-			'author'    : chat.current_user.name,
-			'user_id'   : chat.current_user.uid,
-			'body'      : message,
-			'createTime': firebase.database.ServerValue.TIMESTAMP,
-			'editTime'  : firebase.database.ServerValue.TIMESTAMP
-		};
-		this._messages_ref.push(formed_message);
-	},
-
-	updateMessage: function(id, body)
-	{
-		this._messages_ref.child(id).update({
-			'body': body,
-			'editTime': firebase.database.ServerValue.TIMESTAMP
-		});
-	}
-};
-
-// Create an API module
-API = {
-	messages: [],
-	users: [],
-
-	getActiveUsers: () => this.users,
-	getMessageList: () => this.messages, 
-
-	sendMessage: message => chat.sendMessage(message),
-	updateMessage: (id, message) => chat.updateMessage(id, message),
-
-	_updateMessages: function(messages) {
-		this.messages = this.messages.concat(messages);
-	},
-
-	_updateConnectedUsers: function(users) {
-		this.users = users;
-	}
-};
-
-function init() {
-	// Initialize all modules
-	initPageManager();
-	initNotificationManager();
-
-	// Configure toastr
-	toastr.options = {
-		"debug": false,
-		"positionClass": "toast-top-left",
-		"preventDuplicates": false,
-		"showDuration": "300",
-		"hideDuration": "1000",
-		"timeOut": "5000",
-		"extendedTimeOut": "1000",
-		"showEasing": "swing",
-		"hideEasing": "linear",
-		"showMethod": "fadeIn",
-		"hideMethod": "fadeOut"
-	}
-	
-	var tag = document.getElementById("name_tag");
-	if (!tag) throw new Error('Detected non-genuine version of the code');
-	
-	// connected users dialog box
-	$('#table_connected_users_container').dialog({
-		modal: true, // Dims the page background
-		autoOpen: false,
-		// height:380,
-		id: 'table_connected_users_container',
-		buttons: [{
-			text: 'Close',
-			class: 'dialog_new',
-			click: function() {
-				$('#table_connected_users_container').dialog('close');
-			}
-		}]
-	});
-	
-	$('#about_dialog').dialog({
-		modal: true, //Not necessary but dims the page background
-		autoOpen: false,
-		// height:380,
-		id: 'about_dialog',
-		buttons: [{
-			text:'Close',
-			class: 'dialog_new',
-			click: function() {
-				$('#about_dialog').dialog('close');
-			}
-		}]
-	});
-	
-	// connected users button click handler
-	$('#show_connected').click(() => $('#table_connected_users_container').dialog('open'));
-	// aboout window click handler
-	$('.about').click(() => $('#about_dialog').dialog('open'));
-
-	if (tag.innerHTML != "By Burey")
-		throw new Error('Detected non-genuine version of the code');
-	
-	
-	var post = function() {
-		if (tag.innerHTML != "By Burey") throw new Error();
-		
-		var message_input = document.getElementById('new_message');
-		var message = message_input.value.replace(/\s+$/, '');
-		if (message.length == 0) {
-			toastr.error('Message body cannot be empty', 'Error!');
-			return;
-		}
-
-		chat.sendMessage(message);
-		message_input.value = '';
-	}
-
-	var btn_new_user = document.getElementById('btn_new_user');
-	var btn_login = document.getElementById('btn_login');
-	var btn_logout = document.getElementById('btn_logout');
-	var btn_new_post = document.getElementById('btn_new_post');
-	
-	var btn_update_post = document.getElementById('btn_update_post');
-	var btn_update_cancel = document.getElementById('btn_update_cancel');
-
-	btn_new_user.onclick = function() {
-		login = document.getElementById('login_name').value.trim();
-		password = document.getElementById('login_pass').value.trim();
-		chat.login(login, password, 'register');
-	}
-	
-	btn_login.onclick = function() {
-		login = document.getElementById('login_name').value.trim();
-		password = document.getElementById('login_pass').value.trim();
-		chat.login(login, password, 'login');
-	}
-	
-	btn_logout.onclick = chat.logout;
-	btn_new_post.onclick = post;
-	
-	btn_update_post.onclick = function() {
-		chat.updateMessage(global_msg.msgId, pageManager.getMessage());
-		pageManager.clearMessage();
-		pageManager.showMessageCreate();
-		window.scrollTo(0, msg_location_y);
-	}
-	btn_update_cancel.onclick = function() {
-		global_msg = null;
-		pageManager.clearMessage();
-		pageManager.showMessageCreate();
-	}
-	
-	
-	$("#show_password").on('click',function(){
-		var show_password = $('#show_password').is(':checked');
-		$('#login_pass').attr('type', show_password ? 'text' : 'password');
-	});
-	
-	$(".emoji_table").on('click',function() {
-		var txt = this.innerHTML;
-		var box = document.getElementById('new_message');
-
-		if(txt === 'URL') box.value += '[url:LinkName](http://address)';
-		else box.value += txt;
-	});
-	
-	$(document).on('click',".message_author",function(){
-        var txt = $.trim($(this).text());
-        var box = $("#new_message");
-        box.val(box.val() + txt);
-    });
-	
-	$(document).on('click','.user_controls',function(event) {
-		event.stopImmediatePropagation();
-		var id = $(this).parent().attr("data-messageId");
-		var name = $(this).attr("name");
-		var message_author = $(this).parent().parent().find('.message_author').text();
-		var message_body = $(this).parent().parent().parent().find('.message_body').text();
-
-		global_msg = {
-			msgId: id,
-			author: message_author,
-			body: message_body
-		};
-			
-		if(name === 'edit_message') {
-			pageManager.showMessageUpdate();
-			pageManager.setMessage(markdown.htmlToText(message_body));
-			msg_location_y = window.scrollY;
-            window.scrollTo(0, 100);
-		}
-		else if(name === 'delete_message') {
-			if(confirm("Delete this message?"))
-				chat._messages_ref.child(id).remove();
-		}
-	});
-}
+		<!--<script>-->
+		<!-- var config = {-->
+		<!--   apiKey: "AIzaSyDx95KGqIZcCf8NOkxJ7oP4GJ5IOUkBG_E",-->
+		<!--   authDomain: "bureychat.firebaseapp.com",-->
+		<!--   databaseURL: "https://bureychat.firebaseio.com",-->
+		<!--   storageBucket: "bureychat.appspot.com",-->
+		<!--   messagingSenderId: "1032682003626"-->
+		<!-- };-->
+		<!-- firebase.initializeApp(config);-->
+		<!--       </script>-->
+	</body>
+</html>
