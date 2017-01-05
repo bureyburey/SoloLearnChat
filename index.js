@@ -200,19 +200,19 @@ var markdown = {
 		' ': '&nbsp;'
 	},
 		
-	textToHtml: function(text) {
-		text = this.specToEntities(text);
-		text = text.replace(/\n/g, '<br>');
+	markdownToHtml: function(markdown) {
+		var html = this.specToEntities(markdown);
+		html = html.replace(/\n/g, '<br>');
 		
-		text = text.replace(
+		html = html.replace(
 			/([^\\]|^)\[url:([^\]]+)\]\(([^)]+)\)/g,
 			(_, smb, name, url) => smb + '<a href="' + url + '">' + name + '</a>'
 		);
 		
-		text = text.replace(/([^\\]|^)\*\*(.+?)\*\*/g, (_, smb, content) => smb + '<b>' + content + '</b>');
-		text = text.replace(/([^\\]|^)__(.+?)__/g, (_, smb, content) => smb + '<i>' + content + '</i>');
+		html = html.replace(/([^\\]|^)\*\*(.+?)\*\*/g, (_, smb, content) => smb + '<b>' + content + '</b>');
+		html = html.replace(/([^\\]|^)__(.+?)__/g, (_, smb, content) => smb + '<i>' + content + '</i>');
 		
-		text = text.replace(/\\(.)/g, (_, character) => character);
+		html = html.replace(/\\(.)/g, (_, character) => character);
 		
 		return text;
 	},
@@ -232,8 +232,24 @@ var markdown = {
 		return text.replace(pattern, k => entToSpecMap[k]);
 	},
 	
-	htmlToText: function(html) {
-		return html.replace(/<.*?>/g, '');
+	htmlToText: html => html.replace(/<.*?>/g, ''),
+
+	htmlToMarkdown: function(html) {
+		var markdown = this.entitiesToSpec(html);
+
+		markdown = markdown.replace(/\*\*/g, '\\**');
+		markdown = markdown.replace(/\_\_/g, '\\__');
+		markdown = markdown.replace(/\[[^:\]]+:[^\]]+\](.*?)/g, data => '\\' + data);
+
+		// Simple convertion
+		markdown = html.replace(/<br>/g, '\n');
+		markdown = markdown.replace(/<b>(.*?)<\/b>/g, (_, content) => '**' + content + '**');
+		markdown = markdown.replace(/<i>(.*?)<\/i>/g, (_, content) => '__' + content + '__');
+
+		// Convertion of special objects
+		markdown = markdown.replace(/<a href="(.*?)">(.*?)<\/a>/g, (_, link, name) => '[url:' + name + '](' + link + ')');
+
+		return markdown;
 	}
 };
 
@@ -387,11 +403,9 @@ var chat = {
 			// this will get fired on inital load as well as when ever there is a change in the data
 			
 			chat._messages_ref.on('child_removed', function(target) {
-		    		var key = target.key;
 				// Delete element, using native functions. Works ~6 times faster than jQuery
-				var element = document.getElementById(key);
-				element.remove(element);
-            		});
+				document.getElementById(target.key).remove();
+			});
 			
 			chat._messages_ref.orderByChild("createTime").limitToLast(MESSAGES_TO_LOAD).on('value', function(snapshot) {
 				pageManager.showLoader();
@@ -400,7 +414,7 @@ var chat = {
 				snapshot.forEach(child => { messages.push({
 					id: child.key,
 					author: markdown.specToEntities(child.val().author),
-					body: markdown.textToHtml(child.val().body),
+					body: markdown.markdownToHtml(child.val().body),
 					createTime: child.val().createTime,
 					editTime: child.val().editTime
 				})});
@@ -437,8 +451,6 @@ var chat = {
 					time: child.val()
 				}));
 
-				// console.log(chat.online_users);
-
 				pageManager.updateConnectedUsers(chat.online_users);
 				API._updateConnectedUsers(chat.online_users);
 			});
@@ -453,9 +465,7 @@ var chat = {
 			auth = firebase.auth().signInWithEmailAndPassword(user.name + "@nomail.com", user.password);
 		else return toastr.error('Unknown login mode', 'Error!');
 
-		auth.then(onSuccess).catch(function(error) {
-			toastr.error(error.message, 'Error #' + error.code);
-		});
+		auth.then(onSuccess).catch(error => toastr.error(error.message, 'Error #' + error.code));
 	},
 	
 	login: function(name, pass, mode) {
@@ -506,9 +516,12 @@ var chat = {
 };
 
 // Create an API module
-API = {
+var API = {
 	messages: [],
 	users: [],
+
+	_message_updates_listeners: [],
+	_user_updates_listeners: [],
 
 	getActiveUsers: () => this.users,
 	getMessageList: () => this.messages, 
@@ -516,12 +529,42 @@ API = {
 	sendMessage: message => chat.sendMessage(message),
 	updateMessage: (id, message) => chat.updateMessage(id, message),
 
-	_updateMessages: function(messages) {
-		this.messages = this.messages.concat(messages);
+	_updateMessages: function(new_messages) {
+		this.messages = this.messages.concat(new_messages);
+
+		// Call update for each message on each listener
+		for (var listenerId = 0; listenerId < this._message_updates_listeners.length; ++listenerId)
+			for (var msgId = 0; msgId < new_messages.length; ++msgId)
+				this._message_updates_listeners[listenerId](new_messages[msgId]);
 	},
 
 	_updateConnectedUsers: function(users) {
+		var users_joined = users.filter(user => this.users.indexOf(user) === -1);
+		var users_quited = this.users.filter(user => users.indexOf(user) === -1);
+
+		var user_actions = users_joined.map(user => ({ 'name': user.name, 'action': 'join' }));
+		user_actions = user_actions.concat(users_quited.map(user => ({ 'name': user.name, 'action': 'exit' })));
+
 		this.users = users;
+
+		for (var listenerId = 0; listenerId < this._user_updates_listeners.length; ++listenerId)
+			for (var actId = 0; actId < user_actions.length; ++actId)
+				this._user_updates_listeners[listenerId](user_actions[actId]);
+	},
+
+	// Functions to add new listeners
+	addMessageUpdatesListener: function(listener) {
+		if (typeof(listener) !== 'function')
+			throw new Error('Listener should have typeof `function`, but `' + typeof(listener) + '` was given');
+
+		this._message_updates_listeners.push(listener);
+	},
+	
+	addUserUpdatesListener: function(listener) {
+		if (typeof(listener) !== 'function')
+			throw new Error('Listener should have typeof `function`, but `' + typeof(listener) + '` was given');
+
+		this._user_updates_listeners.push(listener);
 	}
 };
 
@@ -550,9 +593,8 @@ function init() {
 	
 	// connected users dialog box
 	$('#table_connected_users_container').dialog({
-		modal: true, // Dims the page background
+		modal: true,
 		autoOpen: false,
-		// height:380,
 		id: 'table_connected_users_container',
 		buttons: [{
 			text: 'Close',
@@ -564,9 +606,8 @@ function init() {
 	});
 	
 	$('#about_dialog').dialog({
-		modal: true, //Not necessary but dims the page background
+		modal: true,
 		autoOpen: false,
-		// height:380,
 		id: 'about_dialog',
 		buttons: [{
 			text:'Close',
@@ -617,12 +658,6 @@ function init() {
 	btn_login.onclick = function() {
 		login = document.getElementById('login_name').value.trim();
 		password = document.getElementById('login_pass').value.trim();
-		
-// 		if($('#chk_remember_me').is(':checked')){
-//             document.cookie = 'username:' + login + ';password:' + password + ';';
-//         }
-		
-		
 		chat.login(login, password, 'login');
 	}
 	
@@ -642,7 +677,6 @@ function init() {
 	}
 	
 	
-	
 	$("#show_password").on('click',function(){
 		var show_password = $('#show_password').is(':checked');
 		$('#login_pass').attr('type', show_password ? 'text' : 'password');
@@ -656,11 +690,11 @@ function init() {
 		else box.value += txt;
 	});
 	
-	$(document).on('click',".message_author",function(){
-        var txt = $.trim($(this).text());
-        var box = $("#new_message");
-        box.val(box.val() + txt);
-    });
+	$(document).on('click', ".message_author", function(){
+        	var txt = $.trim($(this).text());
+       	 	var box = $("#new_message");
+		box.val(box.val() + txt);
+	});
 	
 	$(document).on('click','.user_controls',function(event) {
 		event.stopImmediatePropagation();
@@ -677,9 +711,10 @@ function init() {
 			
 		if(name === 'edit_message') {
 			pageManager.showMessageUpdate();
-			pageManager.setMessage(markdown.htmlToText(message_body));
+			pageManager.setMessage(markdown.htmlToMarkdown(message_body));
+			
 			msg_location_y = window.scrollY;
-            window.scrollTo(0, 100);
+            		window.scrollTo(0, 100);
 		}
 		else if(name === 'delete_message') {
 			if(confirm("Delete this message?"))
