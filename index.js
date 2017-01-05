@@ -4,6 +4,7 @@ $(init);
 //var FIREBASE_ADDR = "https://sololearnfirebasechat-5bb04.firebaseio.com";
 
 var global_msg;
+var msg_location_y;
 
 var MESSAGES_TO_LOAD = 50;
 
@@ -271,7 +272,7 @@ var chat = {
 					name: child.key,
 					time: child.val()
 				}));
-				
+
 				console.log(chat.online_users);
 
 				pageManager.updateConnectedUsers(chat.online_users);
@@ -462,6 +463,7 @@ function init() {
 		chat.updateMessage(global_msg.msgId, pageManager.getMessage());
 		pageManager.clearMessage();
 		pageManager.showMessageCreate();
+		window.scrollTo(0, msg_location_y);
 	}
 	btn_update_cancel.onclick = function() {
 		global_msg = null;
@@ -479,8 +481,8 @@ function init() {
 		var txt = this.innerHTML;
 		var box = document.getElementById('new_message');
 
-		if(txt === 'URL') box.innerHTML += '[url:LinkName](http://address)';
-		else box.innerHTML += txt;
+		if(txt === 'URL') box.value += '[url:LinkName](http://address)';
+		else box.value += txt;
 	});
 	
 	
@@ -500,6 +502,8 @@ function init() {
 		if(name === 'edit_message') {
 			pageManager.showMessageUpdate();
 			pageManager.setMessage(markdown.htmlToText(message_body));
+			msg_location_y = window.scrollY;
+            window.scrollTo(0, 100);
 		}
 		else if(name === 'delete_message') {
 			if(confirm("Delete this message?"))
