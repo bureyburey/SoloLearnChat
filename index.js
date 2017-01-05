@@ -214,7 +214,7 @@ var markdown = {
 		
 		html = html.replace(/\\(.)/g, (_, character) => character);
 		
-		return text;
+		return html;
 	},
 	
 	specToEntities: function(text) {
