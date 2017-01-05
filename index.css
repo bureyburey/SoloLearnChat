@@ -3,87 +3,78 @@
     font-size: 40px;
     font-family: sans-serif;
     color: #ff9800;
-    /*margin-top:-3px;*/
     margin-bottom:1px;
 }
-a{
-    display: inline;
+
+a {
     font-size: 15px;
     font-weight: bold;
     font-style: italic;
     color: #ff9800;
 }
-/*span{*/
-/*    margin-top:-5px;*/
-/*    margin-bottom:-5px;*/
-/*}*/
-.half_br{
-   display: inline;
-   margin: 0px 0;
-}
-.about{
+
+.about {
     font-size:15px;
     cursor:pointer;
 }
+
 #about_dialog{
     text-align: center;
 }
+
 #name_tag {
- display: inline;
-  font-size: 15px;
-  font-weight: bold;
-  font-style: italic;
-}
-#name_tag_michael{
     display: inline;
-  font-size: 15px;
-  font-weight: bold;
-  font-style: italic;
+    font-size: 15px;
+    font-weight: bold;
+    font-style: italic;
+}
+
+#name_tag_michael {
+    display: inline;
+    font-size: 15px;
+    font-weight: bold;
+    font-style: italic;
 }
 .button {
-  -webkit-box-sizing: content-box;
-  -moz-box-sizing: content-box;
-  box-sizing: content-box;
-    
+    -webkit-box-sizing: content-box;
+    -moz-box-sizing: content-box;
+    box-sizing: content-box;
+
     padding: 0 30px;
     margin: 0 10px;
     border: none;
-    
-  font: normal 16px/2.4 "Open Sans", Helvetica, sans-serif;
-  color: #eee;
-    
-  background: #ff9800;
-  -webkit-box-shadow: 0 3px 0 0 #c70;
-  box-shadow: 0 3px 0 0 #c70;
-    
+
+    font: normal 16px/2.4 "Open Sans", Helvetica, sans-serif;
+    color: #eee;
+
+    background: #ff9800;
+    -webkit-box-shadow: 0 3px 0 0 #c70;
+    box-shadow: 0 3px 0 0 #c70;
+
     cursor: pointer;
     outline: none;
 }
 
 .button:hover {
-  background: #c70;
+    background: #c70;
 }
 
 .input {
-  -webkit-box-sizing: content-box;
-  -moz-box-sizing: content-box;
-  box-sizing: content-box;
-    
-  padding: 10px 20px;
-    
-  border: 1px solid #b7b7b7;
-  border-left: 5px solid #FF851B;
-    
-  font: normal 18px/normal "Times New Roman", Times, serif;
-  color: black;
-    
-  background: #f9f9f9;
-    
-    outline: none;
-}
+    -webkit-box-sizing: content-box;
+    -moz-box-sizing: content-box;
+    box-sizing: content-box;
 
-#new_message{
-    
+    padding: 10px 20px;
+
+    border: 1px solid #b7b7b7;
+    border-left: 5px solid #FF851B;
+
+    font: normal 18px/normal "Times New Roman", Times, serif;
+    color: black;
+
+    background: #f9f9f9;
+
+    outline: none;
 }
 
 #login_name {
@@ -105,7 +96,7 @@ a{
     font-weight: bold;
     color: #888;
 }
-.loader {
+#loader {
     border-bottom: 16px solid #888; /* Light grey */
     border-top: 16px solid #888; /* Light grey */
     border-right: 16px solid #ff9800; /* Orange */
@@ -119,10 +110,15 @@ a{
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
+
 .message {
     margin: 15px;
     padding: 10px;
     background-color: #f5f5f5;
+}
+
+.user_controls {
+    font-size:40px;
 }
 
 .message_author {
