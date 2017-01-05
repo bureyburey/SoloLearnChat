@@ -1,4 +1,4 @@
-timeformat = {
+var timeformat = {
 	formats: {
 		project_default: 'SS:MM:HH mm/dd/yyyy',
 
@@ -12,8 +12,8 @@ timeformat = {
 
 	format: function(format, date)
 	{
-		isAlpha = s => s.toLowerCase() != s.toUpperCase();
-		isDigit = s => s.charCodeAt(0) >= 48 && s.charCodeAt(0) <= 57;
+		var isAlpha = s => s.toLowerCase() != s.toUpperCase();
+		var isDigit = s => s.charCodeAt(0) >= 48 && s.charCodeAt(0) <= 57;
 
 		// DATE
 		var fullYear = date.getFullYear();
@@ -124,4 +124,4 @@ timeformat = {
 
 		return dateString;
 	}
-}
+};
