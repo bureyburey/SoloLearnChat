@@ -390,7 +390,7 @@ var chat = {
 		    		var key = target.key;
 				// Delete element, using native functions. Works ~6 times faster than jQuery
 				var element = document.getElementById(key);
-				element.parentNode.remove(element);
+				element.remove(element);
             		});
 			
 			chat._messages_ref.orderByChild("createTime").limitToLast(MESSAGES_TO_LOAD).on('value', function(snapshot) {
