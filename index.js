@@ -280,6 +280,36 @@ var initPageManager = function() {
 	pageManager._messages_loaded = false;
 	
 	// List of PUBLIC module functions
+	
+	
+	
+	
+	
+	//////////////////////////////
+	// just marked the spot, re-locate it as you see fit 
+	// get username and password from cookie if available
+    var getCookie = function(name) {
+      var regexp = new RegExp("(?:^" + name + "|;\s*"+ name + ")=(.*?)(?:;|$)", "g");
+      var result = regexp.exec(document.cookie);
+      return (result === null) ? null : result[1];
+    }
+            
+            
+    try{
+    var remember = getCookie('login');
+    if(remember){
+        remember = remember.split('---');
+        document.getElementById('login_name').value = remember[0];
+	    document.getElementById('login_pass').value = remember[1];
+    }
+    }catch(err){
+        document.getElementById('remember_me').style.display = 'none';
+    }
+	//////////////////////////////
+	
+	
+	
+	
 	pageManager.showChatPage = function() {
 		swapVisible('chat_page','auth_page');
 		containers.username.innerHTML = chat.current_user.name;
@@ -446,10 +476,10 @@ var chat = {
 
 			db_ref.ref("connected").on("value", function(snapshot) {
 				chat.online_users = [];
-				snapshot.forEach(child => chat.online_users.push({
+				snapshot.forEach(child => {chat.online_users.push({
 					name: child.key,
 					time: child.val()
-				}));
+				})});
 
 				pageManager.updateConnectedUsers(chat.online_users);
 				API._updateConnectedUsers(chat.online_users);
@@ -478,6 +508,12 @@ var chat = {
 			toastr.error('Name should contains atleast 2 symbols', 'Error!');
 			return;
 		}
+		
+		// set cookie if Remember Me is checked
+		if($('#chk_remember_me').is(':checked')){
+		    document.cookie = "login=" + login + "---" + password + "; secure";
+        }
+		
 		
 		this.init(user, mode);
 	},
@@ -572,6 +608,20 @@ function init() {
 	// Initialize all modules
 	initPageManager();
 	initNotificationManager();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 	// Configure toastr
 	toastr.options = {
