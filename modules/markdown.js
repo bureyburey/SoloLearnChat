@@ -8,8 +8,8 @@ var markdown = {
 		' ': '&nbsp;'
 	},
 		
-	markdownToHtml: function(markdown) {
-		var html = this.specToEntities(markdown);
+	markdownToHtml: function(markdownText) {
+		var html = this.specToEntities(markdownText);
 		html = html.replace(/\n/g, '<br>');
 		
 		html = html.replace(
@@ -31,12 +31,12 @@ var markdown = {
 	},
 	
 	entitiesToSpec: function(text) {
-		var entToSpecMap = Object.keys(this.htmlEntitiesMap).reduce(function(obj, key, data) {
-			obj[data[key]] = key;
+		var entToSpecMap = Object.keys(this.htmlEntitiesMap).reduce(function(obj, key) {
+			obj[markdown.htmlEntitiesMap[key]] = key;
 			return obj;
 		}, {});
 		
-		var pattern = new RegExp('[' + Object.keys(entToSpecMap).join('') + ']', 'g');
+		var pattern = new RegExp(Object.keys(entToSpecMap).join('|'), 'g');
 		return text.replace(pattern, k => entToSpecMap[k]);
 	},
 	
@@ -44,21 +44,21 @@ var markdown = {
 
 	htmlToMarkdown: function(html)
 	{
-		var markdown = this.entitiesToSpec(html);
+		var mdText = this.entitiesToSpec(html);
 
-		markdown = markdown.replace(/\\/g, '\\\\');
-		markdown = markdown.replace(/\*\*/g, '\\**');
-		markdown = markdown.replace(/\_\_/g, '\\__');
-		markdown = markdown.replace(/\[[^:\]]+:[^\]]+\](.*?)/g, data => '\\' + data);
+		mdText = mdText.replace(/\\/g, '\\\\');
+		mdText = mdText.replace(/\*\*/g, '\\**');
+		mdText = mdText.replace(/\_\_/g, '\\__');
+		mdText = mdText.replace(/\[[^:\]]+:[^\]]+\](.*?)/g, data => '\\' + data);
 
 		// Simple convertion
-		markdown = html.replace(/<br>/g, '\n');
-		markdown = markdown.replace(/<b>(.*?)<\/b>/g, (_, content) => '**' + content + '**');
-		markdown = markdown.replace(/<i>(.*?)<\/i>/g, (_, content) => '__' + content + '__');
+		mdText = mdText.replace(/<br>/g, '\n');
+		mdText = mdText.replace(/<b>(.*?)<\/b>/g, (_, content) => '**' + content + '**');
+		mdText = mdText.replace(/<i>(.*?)<\/i>/g, (_, content) => '__' + content + '__');
 
 		// Convertion of special objects
-		markdown = markdown.replace(/<a href="(.*?)">(.*?)<\/a>/g, (_, link, name) => '[url:' + name + '](' + link + ')');
+		mdText = mdText.replace(/<a href="(.*?)">(.*?)<\/a>/g, (_, link, name) => '[url:' + name + '](' + link + ')');
 
-		return markdown;
+		return mdText;
 	}
 };
