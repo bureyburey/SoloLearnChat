@@ -16,15 +16,13 @@ var cookies = {
 	{
 		if (cookies_string === '')
 			return this._cookies = {};
-		
-		var data = cookies_string.split('; ').map(v => v.trim());
-		for (var cId = 0; cId < data.length; ++cid)
-		{
-			var pair = data[cId].split('=', 1);
-			this._cookies[pair[0]] = JSON.parse(pair[1]);
-		}
 
-		console.log(this._cookies);
+		var data = cookies_string.split('; ');
+		for (var cId = 0; cId < data.length; ++cId)
+		{
+			var eqIndex = data[cId].indexOf('=');
+			this._cookies[data[cId].substring(0, eqIndex)] = JSON.parse(data[cId].substring(eqIndex + 1));
+		}
 	},
 
 	get: function(name) {
@@ -37,12 +35,10 @@ var cookies = {
 	},
 
 	save: function() {
-		var data = '';
 		for (var cKey in this._cookies)
-			data += cKey + '=' + JSON.stringify(this._cookies[cKey]) + '; ';
-		document.cookie = data.substring(0, data.length - 2);
+			document.cookie = cKey + '=' + JSON.stringify(this._cookies[cKey]);
 	}
-}
+};
 
 // Create time formater module
 var strform = {
@@ -220,7 +216,7 @@ var initNotificationManager = function() {
 			new Notification(message);
 		});
 	}
-}
+};
 
 // Create markdown module
 var markdown = {
@@ -265,7 +261,7 @@ var markdown = {
 		return text.replace(pattern, k => entToSpecMap[k]);
 	},
 	
-	htmlToText: html => html.replace(/<.*?>/g, ''),
+	htmlToText: html => html.replace(/<\/?[a-z]+.*?>/g, ''),
 
 	htmlToMarkdown: function(html)
 	{
@@ -295,6 +291,8 @@ var initPageManager = function() {
 	var containers = {
 		'chat_page': document.getElementById('container_chat'),
 		'auth_page': document.getElementById('container_login'),
+
+		'remember_me': document.getElementById('checkbox_remember_me'),
 
 		'new_message': document.getElementById('new_message'),
 		'message_create_form': document.getElementById('message_create_form'),
@@ -327,6 +325,8 @@ var initPageManager = function() {
 	pageManager.clearMessage = () => containers.new_message.value = '';
 	pageManager.getMessage = () => containers.new_message.value;
 	pageManager.setMessage = text => containers.new_message.value = text;
+
+	pageManager.rememberMe = () => containers.remember_me.checked === true;
 
 	pageManager.showLoader = () => containers.loader.style.display = 'block';
 	pageManager.hideLoader = () => containers.loader.style.display = 'none';
@@ -404,10 +404,16 @@ var chat = {
 
 	current_user: null,
 	
-	_checkUserCookies: function() {
+	authUsingCookies: function() {
 		var login = cookies.get('login');
 		var password = cookies.get('password');
 
+		if (login == undefined || password == undefined) return;
+
+		this.init({
+			'name'    : login,
+			'password': password
+		}, 'login');
 	},
 	
 	init: function(user, mode) {
@@ -510,8 +516,8 @@ var chat = {
 	
 	login: function(name, pass, mode) {
 		var user = {
-			name: name,
-			password: pass
+			'name'    : name,
+			'password': pass
 		};
 		
 		if (user.name.length < 2) {
@@ -519,10 +525,12 @@ var chat = {
 			return;
 		}
 		
-		// set cookie if Remember Me is checked
-		if($('#chk_remember_me').is(':checked')){
-		    document.cookie = "login=" + login + "---" + password + "; secure";
-        }
+		// set cookie if `remember me` is checked
+		if(pageManager.rememberMe()) {
+			cookies.set('login', user.name);
+			cookies.set('password', user.password);
+			cookies.save();
+		}
 		
 		
 		this.init(user, mode);
@@ -768,4 +776,8 @@ function init() {
 				chat._messages_ref.child(id).remove();
 		}
 	});
+
+
+	// After full configuration try to auth using cookies
+	chat.authUsingCookies();
 }
