@@ -14,8 +14,8 @@ var cookies = {
 
 	init: function(cookies_string)
 	{
-		if (cookies_string === '')
-			return this._cookies = {};
+		this._cookies = {};
+		if (cookies_string === '') return;
 
 		var data = cookies_string.split('; ');
 		for (var cId = 0; cId < data.length; ++cId)
@@ -30,13 +30,22 @@ var cookies = {
 		return this._cookies[name];
 	},
 
-	set: function(name, value) {
+	set: function(name, value, expires_days) {
+		var expires = '';
+
+		if (typeof expires_days === 'number' && Number.isFinite(expires_days))  {
+			var date = new Date();
+			date.setTime(date.getTime() + (expires_days * 24 * 60 * 60 * 1000));
+			expires = '; expires=' + date.toGMTString();
+		}
+
 		this._cookies[name] = value;
+		document.cookie = name + '=' + JSON.stringify(this._cookies[name]) + expires + '; path=/';
+		if (expires_days <= 0) delete this._cookies[name];
 	},
 
-	save: function() {
-		for (var cKey in this._cookies)
-			document.cookie = cKey + '=' + JSON.stringify(this._cookies[cKey]);
+	delete: function(name) {
+		this.set(name, '', -10);
 	}
 };
 
@@ -416,8 +425,13 @@ var chat = {
 		}, 'login');
 	},
 	
-	init: function(user, mode) {
-		chat.current_user = user;
+	init: function(user, mode, listener) {
+		if (this.current_user !== null) {
+			this.logout();
+			return false;
+		}
+
+		this.current_user = user;
 
 		// force web sockets to prevent XMLHttpRequest warning    
 		firebase.database.INTERNAL.forceWebSockets();
@@ -502,6 +516,7 @@ var chat = {
 			});
 
 			pageManager.showChatPage();
+			if (typeof(listener) === 'function') listener(chat.current_user);
 		};
 
 		var auth;
@@ -511,10 +526,15 @@ var chat = {
 			auth = firebase.auth().signInWithEmailAndPassword(user.name + "@nomail.com", user.password);
 		else return toastr.error('Unknown login mode', 'Error!');
 
-		auth.then(onSuccess).catch(error => toastr.error(error.message, 'Error #' + error.code));
+		auth.then(onSuccess).catch(function(error) {
+			toastr.error(error.message, 'Error #' + error.code);
+			chat.current_user = null;
+			if (typeof(listener) === 'function') listener(null);
+		});
+		return true;
 	},
 	
-	login: function(name, pass, mode) {
+	login: function(name, pass, mode, listener) {
 		var user = {
 			'name'    : name,
 			'password': pass
@@ -529,20 +549,28 @@ var chat = {
 		if(pageManager.rememberMe()) {
 			cookies.set('login', user.name);
 			cookies.set('password', user.password);
-			cookies.save();
+		} else {
+			cookies.delete('login');
+			cookies.delete('password');
 		}
 		
 		
-		this.init(user, mode);
+		this.init(user, mode, listener);
 	},
 
 	logout: function() {
 		firebase.auth().signOut().then(function() {
+			// Remove all references
 			user_ref.remove();
 
 			chat._messages_ref.off();
 			am_online.off();
 			user_ref.off();
+
+			// Remove user cookies and current user
+			cookies.delete('login');
+			cookies.delete('password');
+			chat.current_user = null;
 		});
 
 		pageManager.showAuthPage();
@@ -571,21 +599,34 @@ var chat = {
 
 // Create an API module
 var API = {
-	_messages: [],
-	_users: [],
+	// Private members
+	_messages: [], // List of all messages and edits
+	_users: [], // Liste of active users
 
-	_message_updates_listeners: [],
-	_user_updates_listeners: [],
+	_message_updates_listeners: [], // Listeners of message updates
+	_user_updates_listeners: [], // Listeners of user updats
 
+	// LogIn modes MODE_REGISTER to create new user, MODE_LOGIN to log into existing account
 	MODE_REGISTER: 'register',
 	MODE_LOGIN: 'login',
 
+	// Returns list of active users
 	getActiveUsers: function() { return this._users; },
+	// Returns list of all messages and edits
 	getMessageList: function() { return this._messages; },
 
-	logIn: (user, mode) => chat.login(user.name, user.password, mode),
+	// Function to log into chat, listener is function, that takes user.
+	// On error listener is executed with NULL
+	// On success listener is executed with USER object
+	logIn: (user, mode, listener) => chat.login(user.name, user.password, mode, listener),
+	// Function to close current chat session
+	logOut: () => chat.logout(),
 
+	// Sends message as current user
 	sendMessage: message => chat.sendMessage(message),
+	// Update content of target message
+	// Can edit only messages, that user owns
+	//   * Moderators can edit all messages
 	updateMessage: (id, message) => chat.updateMessage(id, message),
 
 	_updateMessages: function(new_messages) {
@@ -785,4 +826,4 @@ function init() {
 
 	// After full configuration try to auth using cookies
 	chat.authUsingCookies();
-};
+}
