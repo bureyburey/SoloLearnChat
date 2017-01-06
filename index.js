@@ -448,8 +448,8 @@ var chat = {
             
             // // CHECK WHY MESSAGES DO NOT HAVE NEW LINES
             // chat._messages_ref.on('child_changed', function(target) {
-            //     var txt = $('#'+target.key).find('.message_body').text(target.val().body);
-            //     // document.getElementById(target.key)
+            //     $('#'+target.key).find('.message_body').text(target.val().body);
+            //     // document.getElementById(target.key);
             // });
             
             
