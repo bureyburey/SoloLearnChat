@@ -238,8 +238,8 @@ var markdown = {
 		' ': '&nbsp;'
 	},
 		
-	markdownToHtml: function(markdown) {
-		var html = this.specToEntities(markdown);
+	markdownToHtml: function(markdownText) {
+		var html = this.specToEntities(markdownText);
 		html = html.replace(/\n/g, '<br>');
 		
 		html = html.replace(
@@ -261,12 +261,12 @@ var markdown = {
 	},
 	
 	entitiesToSpec: function(text) {
-		var entToSpecMap = Object.keys(this.htmlEntitiesMap).reduce(function(obj, key, data) {
-			obj[data[key]] = key;
+		var entToSpecMap = Object.keys(this.htmlEntitiesMap).reduce(function(obj, key) {
+			obj[markdown.htmlEntitiesMap[key]] = key;
 			return obj;
 		}, {});
 		
-		var pattern = new RegExp('[' + Object.keys(entToSpecMap).join('') + ']', 'g');
+		var pattern = new RegExp(Object.keys(entToSpecMap).join('|'), 'g');
 		return text.replace(pattern, k => entToSpecMap[k]);
 	},
 	
@@ -274,22 +274,22 @@ var markdown = {
 
 	htmlToMarkdown: function(html)
 	{
-		var markdown = this.entitiesToSpec(html);
+		var mdText = this.entitiesToSpec(html);
 
-		markdown = markdown.replace(/\\/g, '\\\\');
-		markdown = markdown.replace(/\*\*/g, '\\**');
-		markdown = markdown.replace(/\_\_/g, '\\__');
-		markdown = markdown.replace(/\[[^:\]]+:[^\]]+\](.*?)/g, data => '\\' + data);
+		mdText = mdText.replace(/\\/g, '\\\\');
+		mdText = mdText.replace(/\*\*/g, '\\**');
+		mdText = mdText.replace(/\_\_/g, '\\__');
+		mdText = mdText.replace(/\[[^:\]]+:[^\]]+\](.*?)/g, data => '\\' + data);
 
 		// Simple convertion
-		markdown = html.replace(/<br>/g, '\n');
-		markdown = markdown.replace(/<b>(.*?)<\/b>/g, (_, content) => '**' + content + '**');
-		markdown = markdown.replace(/<i>(.*?)<\/i>/g, (_, content) => '__' + content + '__');
+		mdText = mdText.replace(/<br>/g, '\n');
+		mdText = mdText.replace(/<b>(.*?)<\/b>/g, (_, content) => '**' + content + '**');
+		mdText = mdText.replace(/<i>(.*?)<\/i>/g, (_, content) => '__' + content + '__');
 
 		// Convertion of special objects
-		markdown = markdown.replace(/<a href="(.*?)">(.*?)<\/a>/g, (_, link, name) => '[url:' + name + '](' + link + ')');
+		mdText = mdText.replace(/<a href="(.*?)">(.*?)<\/a>/g, (_, link, name) => '[url:' + name + '](' + link + ')');
 
-		return markdown;
+		return mdText;
 	}
 };
 
@@ -364,16 +364,13 @@ var initPageManager = function() {
 
 		if (this._messages_loaded)
 		{
-			for (var msgId in messages)
+			for (var msgId in messages) {
 				if (messages[msgId].add_mode === 'new')
 					message_list.innerHTML = formMessageFull(messages[msgId]) + message_list.innerHTML;
-
-			for (var msgId in messages)
-				if (messages[msgId].add_mode === 'edit')
+				else if (messages[msgId].add_mode === 'edit')
 					document.getElementById(messages[msgId].id).innerHTML = formMessage(messages[msgId]);
-		}
-		else
-		{
+			}
+		} else {
 			for (var msgId in messages)
 				message_list.innerHTML = formMessageFull(messages[msgId]) + message_list.innerHTML;
 		}
@@ -383,6 +380,8 @@ var initPageManager = function() {
 
 	pageManager.updateConnectedUsers = function(users) {
 		// Sort users by join time
+		var users_joined = users.filter(user => API._users.indexOf(user) === -1);
+
 		users.sort((a, b) => a.time - b.time);
 
 		$('#show_connected').text("Connected Users: " + users.length);
@@ -395,9 +394,11 @@ var initPageManager = function() {
 			var html = "<tr class='user_row'><td class='username'>" + users[i].name + "</td></tr>";
 			tbl.append(html);
 		}
+
+		if (users.length === 0) return;
 		
-		var username = users[users.length - 1].name;
-		notificationManager.showNotification(username + " joined the chat");
+		for (var userId in users_joined)
+			notificationManager.showNotification(users_joined[userId].name + " joined the chat");
 	}
 };
 
@@ -464,7 +465,8 @@ var chat = {
 			
 			chat._messages_ref.on('child_removed', function(target) {
 				// Delete element, using native functions. Works ~6 times faster than jQuery
-				document.getElementById(target.key).remove();
+				var element = document.getElementById(target.key);
+				if (element != undefined) element.remove();
 			});
 			
 			chat._messages_ref.orderByChild("createTime").limitToLast(MESSAGES_TO_LOAD).on('value', function(snapshot) {
@@ -481,9 +483,8 @@ var chat = {
 
 				var message_ids = chat.messages.map(msg => msg.id);
 				var new_messages = messages.filter(msg =>
-					(msg.createTime > chat.last_message_time
-					|| (msg.editTime != msg.createTime && msg.editTime > chat._message_map[msg.id].editTime))
-					&& (!chat._send_message || msg.author != markdown.specToEntities(chat.current_user.name))
+					(msg.createTime > chat.last_message_time && !chat._message_map.hasOwnProperty(msg.id))
+					|| (msg.editTime != msg.createTime && msg.editTime > chat._message_map[msg.id].editTime)
 				);
 
 				new_messages.forEach(message => {
@@ -732,15 +733,14 @@ function init() {
 	var post = function() {
 		if (tag.innerHTML != "By Burey") throw new Error();
 		
-		var message_input = document.getElementById('new_message');
-		var message = message_input.value.replace(/\s+$/, '');
+		var message = pageManager.getMessage().replace(/\s+$/, '');
 		if (message.length == 0) {
 			toastr.error('Message body cannot be empty', 'Error!');
 			return;
 		}
 
 		chat.sendMessage(message);
-		message_input.value = '';
+		pageManager.setMessage('');
 	}
 
 	var btn_new_user = document.getElementById('btn_new_user');
