@@ -22,29 +22,31 @@ var markdown = {
 		
 		html = html.replace(/\\(.)/g, (_, character) => character);
 		
-		return text;
+		return html;
 	},
 	
 	specToEntities: function(text) {
-		var pattern = new RegExp('/[' + Object.keys(this.htmlEntitiesMap).join('') + ']/', 'g');
+		var pattern = new RegExp('[' + Object.keys(this.htmlEntitiesMap).join('') + ']', 'g');
 		return text.replace(pattern, k => this.htmlEntitiesMap[k]);
 	},
 	
 	entitiesToSpec: function(text) {
-		var entToSpecMap = Object.keys(this.htmlEntitiesMap).reduce(function(obj, key){
+		var entToSpecMap = Object.keys(this.htmlEntitiesMap).reduce(function(obj, key, data) {
 			obj[data[key]] = key;
 			return obj;
 		}, {});
 		
-		var pattern = new RegExp('/[' + Object.keys(entToSpecMap).join('') + ']/', 'g');
+		var pattern = new RegExp('[' + Object.keys(entToSpecMap).join('') + ']', 'g');
 		return text.replace(pattern, k => entToSpecMap[k]);
 	},
 	
-	htmlToText: html => html.replace(/<.*?>/g, ''),
+	htmlToText: html => html.replace(/<\/?[a-z]+.*?>/g, ''),
 
-	htmlToMarkdown: function(html) {
+	htmlToMarkdown: function(html)
+	{
 		var markdown = this.entitiesToSpec(html);
 
+		markdown = markdown.replace(/\\/g, '\\\\');
 		markdown = markdown.replace(/\*\*/g, '\\**');
 		markdown = markdown.replace(/\_\_/g, '\\__');
 		markdown = markdown.replace(/\[[^:\]]+:[^\]]+\](.*?)/g, data => '\\' + data);
