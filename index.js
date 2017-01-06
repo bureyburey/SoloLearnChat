@@ -797,12 +797,12 @@ function init() {
 		pageManager.setMessage(pageManager.getMessage() + author);
 	});
 	
-	$(document).on('click','.user_controls',function(event) {
+	$(document).on('click','.user_controls', function(event) {
 		event.stopImmediatePropagation();
 		var id = $(this).parent().attr("data-messageId");
 		var name = $(this).attr("name");
 		var message_author = $(this).parent().parent().find('.message_author').text();
-		var message_body = $(this).parent().parent().parent().find('.message_body').text();
+		var message_body = $(this).parent().parent().parent().find('.message_body').html();
 
 		global_msg = {
 			msgId: id,
