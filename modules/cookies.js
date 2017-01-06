@@ -3,8 +3,8 @@ var cookies = {
 
 	init: function(cookies_string)
 	{
-		if (cookies_string === '')
-			return this._cookies = {};
+		this._cookies = {};
+		if (cookies_string === '') return;
 
 		var data = cookies_string.split('; ');
 		for (var cId = 0; cId < data.length; ++cId)
@@ -19,12 +19,21 @@ var cookies = {
 		return this._cookies[name];
 	},
 
-	set: function(name, value) {
+	set: function(name, value, expires_days) {
+		var expires = '';
+
+		if (typeof expires_days === 'number' && Number.isFinite(expires_days))  {
+			var date = new Date();
+			date.setTime(date.getTime() + (expires_days * 24 * 60 * 60 * 1000));
+			expires = '; expires=' + date.toGMTString();
+		}
+
 		this._cookies[name] = value;
+		document.cookie = name + '=' + JSON.stringify(this._cookies[name]) + expires + '; path=/';
+		if (expires_days <= 0) delete this._cookies[name];
 	},
 
-	save: function() {
-		for (var cKey in this._cookies)
-			document.cookie = cKey + '=' + JSON.stringify(this._cookies[cKey]);
+	delete: function(name) {
+		this.set(name, '', -10);
 	}
 };
