@@ -31,24 +31,24 @@
 			</h1>
 			
 			<div id='container_login'>
-					<input id='login_name' class="input" placeholder='User Name:'><br><br>
-					<input id='login_pass' class='input' placeholder='Password:' type='text'><br><br>
-					<label><input id='show_password' type='checkbox' checked> Show Password</label>
-					<label id='remember_me'><input id='chk_remember_me' type='checkbox'> Remember Me</label>
-					<br><br>
-					
-					<button id='btn_login' class='button'>Sign in</button>
-					<button id='btn_new_user' class='button'>Register</button>
-					<br><br><br>
-					
-					<div class ='input' style="border-color: red">
-						Notice:<br>
-						<ol>
-							<li>New chat supports user authentication</li>
-							<li>First time users: pick a username (no spaces like in the old chat) and password you can remember
-							<li>Those will be used for future authentication and enable you to edit/delete your own messages
-						</ol>
-					</div>
+				<input id='login_name' class="input" placeholder='User Name:'><br><br>
+				<input id='login_pass' class='input' placeholder='Password:' type='text'><br><br>
+				<label><input id='show_password' type='checkbox' checked> Show Password</label>
+				<label id='remember_me'><input id='checkbox_remember_me' type='checkbox'> Remember Me</label>
+				<br><br>
+				
+				<button id='btn_login' class='button'>Sign in</button>
+				<button id='btn_new_user' class='button'>Register</button>
+				<br><br><br>
+				
+				<div class ='input' style="border-color: red">
+					Notice:<br>
+					<ol>
+						<li>New chat supports user authentication</li>
+						<li>First time users: pick a username (no spaces like in the old chat) and password you can remember
+						<li>Those will be used for future authentication and enable you to edit/delete your own messages
+					</ol>
+				</div>
 			</div>
 			
 			
@@ -143,16 +143,5 @@
 			
 			firebase.initializeApp(config);
 		</script>
-		
-		<!--<script>-->
-		<!-- var config = {-->
-		<!--   apiKey: "AIzaSyDx95KGqIZcCf8NOkxJ7oP4GJ5IOUkBG_E",-->
-		<!--   authDomain: "bureychat.firebaseapp.com",-->
-		<!--   databaseURL: "https://bureychat.firebaseio.com",-->
-		<!--   storageBucket: "bureychat.appspot.com",-->
-		<!--   messagingSenderId: "1032682003626"-->
-		<!-- };-->
-		<!-- firebase.initializeApp(config);-->
-		<!--       </script>-->
 	</body>
 </html>
