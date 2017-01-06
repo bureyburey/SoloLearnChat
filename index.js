@@ -438,16 +438,23 @@ var chat = {
                 document.getElementById(target.key).remove();
             });
             
+            
+            // // TO IMPLEMENT => PREPEND MESSAGE TO MESSAGES LIST
             // chat._messages_ref.on('child_added', function(target) {
                 
                 
             // });  
             
+            
+            // // CHECK WHY MESSAGES DO NOT HAVE NEW LINES
             // chat._messages_ref.on('child_changed', function(target) {
-            //     document.getElementById(target.key).
+            //     var txt = $('#'+target.key).find('.message_body').text(target.val().body);
+            //     // document.getElementById(target.key)
             // });
             
             
+            
+            // NEED TO CHANGE on to once
             chat._messages_ref.orderByChild("createTime").limitToLast(MESSAGES_TO_LOAD).on('value', function(snapshot) {
                 pageManager.showLoader();
 
