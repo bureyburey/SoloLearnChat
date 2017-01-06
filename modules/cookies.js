@@ -26,6 +26,5 @@ var cookies = {
 	save: function() {
 		for (var cKey in this._cookies)
 			document.cookie = cKey + '=' + JSON.stringify(this._cookies[cKey]);
-		console.log(document.cookie);
 	}
-}
+};
