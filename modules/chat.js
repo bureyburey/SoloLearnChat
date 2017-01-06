@@ -61,7 +61,8 @@ var chat = {
 			
 			chat._messages_ref.on('child_removed', function(target) {
 				// Delete element, using native functions. Works ~6 times faster than jQuery
-				document.getElementById(target.key).remove();
+				var element = document.getElementById(target.key);
+				if (element != undefined) element.remove();
 			});
 			
 			chat._messages_ref.orderByChild("createTime").limitToLast(MESSAGES_TO_LOAD).on('value', function(snapshot) {
@@ -78,9 +79,8 @@ var chat = {
 
 				var message_ids = chat.messages.map(msg => msg.id);
 				var new_messages = messages.filter(msg =>
-					(msg.createTime > chat.last_message_time
-					|| (msg.editTime != msg.createTime && msg.editTime > chat._message_map[msg.id].editTime))
-					&& (!chat._send_message || msg.author != markdown.specToEntities(chat.current_user.name))
+					(msg.createTime > chat.last_message_time && !chat._message_map.hasOwnProperty(msg.id))
+					|| (msg.editTime != msg.createTime && msg.editTime > chat._message_map[msg.id].editTime)
 				);
 
 				new_messages.forEach(message => {
