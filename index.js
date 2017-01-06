@@ -223,7 +223,7 @@ var markdown = {
 	},
 	
 	entitiesToSpec: function(text) {
-		var entToSpecMap = Object.keys(this.htmlEntitiesMap).reduce(function(obj, key){
+		var entToSpecMap = Object.keys(this.htmlEntitiesMap).reduce(function(obj, key, data){
 			obj[data[key]] = key;
 			return obj;
 		}, {});
