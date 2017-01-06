@@ -143,6 +143,8 @@ a {
     padding: 10px;
     font: normal 18px/normal "Times New Roman", Times, serif;
     font-size: 22px;
+
+    word-wrap: break-word;
 }
 
 .message a {
