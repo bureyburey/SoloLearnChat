@@ -20,7 +20,7 @@ var markdown = {
 		html = html.replace(/([^\\]|^)\*\*(.+?)\*\*/g, (_, smb, content) => smb + '<b>' + content + '</b>');
 		html = html.replace(/([^\\]|^)__(.+?)__/g, (_, smb, content) => smb + '<i>' + content + '</i>');
 		
-		html = html.replace(/\\(.)/g, (_, character) => character);
+		html = html.replace(/\\([\[*_])/g, (_, character) => character);
 		
 		return html;
 	},
@@ -40,7 +40,7 @@ var markdown = {
 		return text.replace(pattern, k => entToSpecMap[k]);
 	},
 	
-	htmlToText: html => html.replace(/<\/?[a-z]+.*?>/g, ''),
+	htmlToText: html => html.replace(/<\/?[a-z]+[^>]*>/g, ''),
 
 	htmlToMarkdown: function(html)
 	{
