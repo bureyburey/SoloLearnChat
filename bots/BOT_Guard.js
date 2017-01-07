@@ -7,18 +7,21 @@ function init(user) {
 	// We are successfully logged in
 	// Fill in bad words to start
 	BOT_Guard.addWordList([
-		'smooh'
+		'smooh', 'ass'
 	]);
 
 	// Create listeners to check messages
 	API.addUserUpdatesListener(BOT_Guard.onUserListUpdate);
 	API.addMessageUpdatesListener(BOT_Guard.onMessageRecieve);
-}
+};
+
 
 var BOT_Guard = {
 	_users_data: {},
 	_filtering_list: [],
 	_filters: [],
+
+	_loadUsers: json => this._users_data = json,
 
 	addWordList: function(wordList) {
 		for (var wId = 0; wId < wordList.length; ++wId)
@@ -31,8 +34,8 @@ var BOT_Guard = {
 
 		var filter = '', sId;
 		for (sId = 0; sId < word.length; ++sId)
-			filter += word[sId] + '(\\b|[^a-z]*)';
-		BOT_Guard._filters.push(new RegExp(filter, 'gi'));
+			filter += word[sId] + '[^a-z]?';
+		BOT_Guard._filters.push(new RegExp(filter + '\\b', 'gi'));
 
 		filter = '';
 		for (sId = 0; sId < word.length; ++sId)
@@ -40,16 +43,17 @@ var BOT_Guard = {
 		BOT_Guard._filters.push(new RegExp(filter, 'g'));
 	},
 
-	getWordList: function() { return BOT_Guard._filtering_list; },
+	getWordList: () => BOT_Guard._filtering_list,
 
 	_filterMessage: function(message) {
 		var filtered_message = message;
 
-		for (var fId in BOT_Guard._filtering_list)
+		for (var fId in BOT_Guard._filters)
 			filtered_message = filtered_message.replace(BOT_Guard._filters[fId], '@!$\\*');
 
 		return filtered_message;
 	},
+
 	_capsToLowerRatio: function(message) {
 		var capital = 0;
 		var lower = 0;
@@ -68,40 +72,6 @@ var BOT_Guard = {
 			BOT_Guard._addNewUser(message.author);
 
 		var text = markdown.htmlToMarkdown(message.body);
-		
-		var follow_rules = true;
-		var user_violations = [];
-
-		// If message contains obscene language - filter it and add 1 foul to user
-		var filtered_message = BOT_Guard._filterMessage(text);
-		if (filtered_message !== text) {
-			follow_rules = false;
-			BOT_Guard._users_data[message.author].violations.obscene_language += 1;
-			user_violations.push('**Obscene language** is not allowed');
-		}
-
-		// Check message for CAPS ratio
-		var CTL_ratio = BOT_Guard._capsToLowerRatio(text);
-		if (CTL_ratio >= 0.7 && text.length > 3) {
-			follow_rules = false;
-			BOT_Guard._users_data[message.author].violations.caps += 1;
-			filtered_message = filtered_message.toLowerCase();
-			user_violations.push('**CAPS** is not allowed');
-		}
-
-		// Edit message if it fouls the rules, and write about it in chat
-		if (!follow_rules)
-		{
-			API.updateMessage(message.id, filtered_message);
-			BOT_Guard._users_data[message.author].reputation -= 1;
-			API.sendMessage(
-				'@{' + message.author + '} do not foul the rules!\n' +
-				user_violations.join('\n') + '\n' +
-				'Your reputation: **__' + BOT_Guard._users_data[message.author].reputation + '__**'
-			);
-
-			return;
-		}
 
 		// If all good check if user is requested information or wants to update the bot
 		if (/@{BOT_Guard}/.test(text)) {
@@ -140,7 +110,41 @@ var BOT_Guard = {
 
 			API.sendMessage(
 				'**Result of queries**:\n\n' +
+				(query_results.length != 0 ? '**========== QUERY ==========**\n' : '') +
 				query_results.join('\n\n**========== QUERY ==========**\n')
+			);
+			return;
+		}
+
+		var follow_rules = true;
+		var user_violations = [];
+
+		// If message contains obscene language - filter it and add 1 foul to user
+		var filtered_message = BOT_Guard._filterMessage(text);
+		if (filtered_message !== text) {
+			follow_rules = false;
+			BOT_Guard._users_data[message.author].violations.obscene_language += 1;
+			user_violations.push('**Obscene language** is not allowed');
+		}
+
+		// Check message for CAPS ratio
+		var CTL_ratio = BOT_Guard._capsToLowerRatio(text);
+		if (CTL_ratio >= 0.7 && text.length > 3) {
+			follow_rules = false;
+			BOT_Guard._users_data[message.author].violations.caps += 1;
+			filtered_message = filtered_message.toLowerCase();
+			user_violations.push('**CAPS** is not allowed');
+		}
+
+		// Edit message if it fouls the rules, and write about it in chat
+		if (!follow_rules)
+		{
+			API.updateMessage(message.id, filtered_message);
+			BOT_Guard._users_data[message.author].reputation -= 1;
+			API.sendMessage(
+				'@{' + message.author + '} do not foul the rules!\n' +
+				user_violations.join('\n') + '\n' +
+				'Your reputation: **__' + BOT_Guard._users_data[message.author].reputation + '__**'
 			);
 		}
 	},
