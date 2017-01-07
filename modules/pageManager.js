@@ -14,8 +14,11 @@ var initPageManager = function() {
 
 		'username': document.getElementById('username'),
 
-		'loader': document.getElementById('loader')
-	}
+		'loader': document.getElementById('loader'),
+
+		// JQuery entities
+		'j_document': $(document)
+	};
 	
 	// List of PRIVATE module functions
 	var swapVisible = function(containerToShow, containerToHide) {
@@ -26,6 +29,8 @@ var initPageManager = function() {
 	pageManager._messages_loaded = false;
 	
 	// List of PUBLIC module functions
+	pageManager.getContainer = name => containers[name];
+
 	pageManager.showChatPage = function() {
 		swapVisible('chat_page','auth_page');
 		containers.username.innerHTML = chat.current_user.name;
@@ -38,6 +43,7 @@ var initPageManager = function() {
 	pageManager.clearMessage = () => containers.new_message.value = '';
 	pageManager.getMessage = () => containers.new_message.value;
 	pageManager.setMessage = text => containers.new_message.value = text;
+	pageManager.addToMessage = text => containers.new_message.value += text;
 
 	pageManager.rememberMe = () => containers.remember_me.checked === true;
 
@@ -50,8 +56,8 @@ var initPageManager = function() {
 			html += '<span class="message_author">@{' + message.author + '}</span>';
 			
 			html += '<span class="user_controls" data-messageId="' + message.id + '">';
-			html += '<span class="user_controls" name="edit_message">&#x270F;</span>';
-			html += '<span class="user_controls" name="delete_message">&#x1f5d1;</span>';
+			html += '<span class="user_control" name="edit_message">&#x270F;</span>';
+			html += '<span class="user_control" name="delete_message">&#x1f5d1;</span>';
 			html += '</span>';
 			
 			var formated_time = timeformat.format(timeformat.formats.project_default, new Date(message.createTime));
@@ -80,28 +86,32 @@ var initPageManager = function() {
 		}
 
 		this._messages_loaded = true;
-	}
+	};
 
 	pageManager.updateConnectedUsers = function(users) {
 		// Sort users by join time
-		var users_joined = users.filter(user => API._users.indexOf(user) === -1);
+		var users_joined = API._getJoinedUsers();
 
 		users.sort((a, b) => a.time - b.time);
 
-		$('#show_connected').text("Connected Users: " + users.length);
+		$('#show_connected').text('Connected Users: ' + users.length);
 
 		// clean the table except the first row
-		var tbl = $("#table_connected_users");
-		tbl.find("tr:gt(0)").remove();
+		var tbl = $('#table_connected_users');
+		tbl.find('tr:gt(0)').remove();
 		
 		for (var i = 0; i < users.length; ++i) {
-			var html = "<tr class='user_row'><td class='username'>" + users[i].name + "</td></tr>";
+			var html = '<tr class="user_row"><td class="username">' + users[i].name + '</td></tr>';
 			tbl.append(html);
 		}
-
-		if (users.length === 0) return;
 		
 		for (var userId in users_joined)
-			notificationManager.showNotification(users_joined[userId].name + " joined the chat");
-	}
+			notificationManager.showNotification(users_joined[userId].name + ' joined the chat', '[Chat]');
+	};
+
+	// functions to work with message editing
+	var anchor = 0;
+	pageManager.setAnchor = value => anchor = value;
+	pageManager.getAnchor = () => anchor;
+	pageManager.scrollTo = (anchor, time) => window.scrollTo(anchor, time);
 };
