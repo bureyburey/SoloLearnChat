@@ -1,5 +1,4 @@
 var chat = {
-	_send_message: false,
 	_messages_ref: null,
 
 	_message_map: {},
@@ -38,13 +37,13 @@ var chat = {
 			user.name = chat.current_user.name;
 			chat.current_user = user;
 			
-			db_ref.ref("user_list").child(user.uid).set({
+			db_ref.ref('user_list').child(user.uid).set({
 				username: user.name,
 				lastOnline: firebase.database.ServerValue.TIMESTAMP
 			});
 		
-			chat._messages_ref = db_ref.ref("chat_messages");
-			am_online = firebase.database().ref(".info/connected");
+			chat._messages_ref = db_ref.ref('chat_messages');
+			am_online = firebase.database().ref('.info/connected');
 			user_ref = firebase.database().ref('/connected/' + user.name);
 
 			pageManager._messages_loaded = false;
@@ -65,7 +64,7 @@ var chat = {
 				if (element != undefined) element.remove();
 			});
 			
-			chat._messages_ref.orderByChild("createTime").limitToLast(MESSAGES_TO_LOAD).on('value', function(snapshot) {
+			chat._messages_ref.orderByChild('createTime').limitToLast(MESSAGES_TO_LOAD).on('value', function(snapshot) {
 				pageManager.showLoader();
 
 				var messages = [];
@@ -88,7 +87,6 @@ var chat = {
 					message.add_mode = message.editTime === message.createTime ? 'new' : 'edit';
 				});
 
-				chat._send_message = false;
 				if (new_messages.length > 0)
 				{
 					chat.messages = chat.messages.concat(new_messages);
@@ -101,15 +99,15 @@ var chat = {
 			});
 
 
-			db_ref.ref("connected").on("value", function(snapshot) {
+			db_ref.ref('connected').on('value', function(snapshot) {
 				chat.online_users = [];
 				snapshot.forEach(child => {chat.online_users.push({
 					name: child.key,
 					time: child.val()
 				})});
 
-				pageManager.updateConnectedUsers(chat.online_users);
 				API._updateConnectedUsers(chat.online_users);
+				pageManager.updateConnectedUsers(chat.online_users);
 			});
 
 			pageManager.showChatPage();
@@ -118,9 +116,9 @@ var chat = {
 
 		var auth;
 		if(mode === 'register')
-			auth = firebase.auth().createUserWithEmailAndPassword(user.name + "@nomail.com", user.password);
+			auth = firebase.auth().createUserWithEmailAndPassword(user.name + '@nomail.com', user.password);
 		else if (mode === 'login')
-			auth = firebase.auth().signInWithEmailAndPassword(user.name + "@nomail.com", user.password);
+			auth = firebase.auth().signInWithEmailAndPassword(user.name + '@nomail.com', user.password);
 		else return toastr.error('Unknown login mode', 'Error!');
 
 		auth.then(onSuccess).catch(function(error) {
@@ -146,11 +144,7 @@ var chat = {
 		if(pageManager.rememberMe()) {
 			cookies.set('login', user.name);
 			cookies.set('password', user.password);
-		} else {
-			cookies.delete('login');
-			cookies.delete('password');
 		}
-		
 		
 		this.init(user, mode, listener);
 	},
@@ -174,7 +168,11 @@ var chat = {
 	},
 
 	sendMessage: function(message) {
-		this._send_message = true;
+		if (message.length == 0) {
+			toastr.error('Message body cannot be empty', 'Error!');
+			return;
+		}
+
 		var formed_message = {
 			'author'    : chat.current_user.name,
 			'user_id'   : chat.current_user.uid,
@@ -182,6 +180,7 @@ var chat = {
 			'createTime': firebase.database.ServerValue.TIMESTAMP,
 			'editTime'  : firebase.database.ServerValue.TIMESTAMP
 		};
+
 		this._messages_ref.push(formed_message);
 	},
 
