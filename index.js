@@ -1,10 +1,6 @@
-// Execute init function on full document load
-$(init);
-
-//var FIREBASE_ADDR = "https://sololearnfirebasechat-5bb04.firebaseio.com";
+//var FIREBASE_ADDR = 'https://sololearnfirebasechat-5bb04.firebaseio.com';
 
 var global_msg;
-var msg_location_y;
 
 var MESSAGES_TO_LOAD = 50;
 
@@ -213,11 +209,12 @@ var initNotificationManager = function() {
 		if('vibrate' in window && notify_vibrate.checked)
 			navigator.vibrate(1000);
 		
-		// If the browser does not supports notifications, don not run next code
-		if (!('Notification' in window) || !notify_message.checked) return;
+		if (!notify_message.checked) return;
 
 		if (title != undefined) toastr.success(message, title);
-		
+
+		// If the browser does not supports notifications, don not run next code
+		if (!('Notification' in window)) return;
 		// Check whether notification permissions have already been granted
 		// Otherwise, we need to ask the user for permission
 		if (Notification.permission === 'granted') new Notification(message);
@@ -250,7 +247,7 @@ var markdown = {
 		html = html.replace(/([^\\]|^)\*\*(.+?)\*\*/g, (_, smb, content) => smb + '<b>' + content + '</b>');
 		html = html.replace(/([^\\]|^)__(.+?)__/g, (_, smb, content) => smb + '<i>' + content + '</i>');
 		
-		html = html.replace(/\\(.)/g, (_, character) => character);
+		html = html.replace(/\\([\[*_])/g, (_, character) => character);
 		
 		return html;
 	},
@@ -270,7 +267,7 @@ var markdown = {
 		return text.replace(pattern, k => entToSpecMap[k]);
 	},
 	
-	htmlToText: html => html.replace(/<\/?[a-z]+.*?>/g, ''),
+	htmlToText: html => html.replace(/<\/?[a-z]+[^>]*>/g, ''),
 
 	htmlToMarkdown: function(html)
 	{
@@ -310,8 +307,11 @@ var initPageManager = function() {
 
 		'username': document.getElementById('username'),
 
-		'loader': document.getElementById('loader')
-	}
+		'loader': document.getElementById('loader'),
+
+		// JQuery entities
+		'j_document': $(document)
+	};
 	
 	// List of PRIVATE module functions
 	var swapVisible = function(containerToShow, containerToHide) {
@@ -322,6 +322,8 @@ var initPageManager = function() {
 	pageManager._messages_loaded = false;
 	
 	// List of PUBLIC module functions
+	pageManager.getContainer = name => containers[name];
+
 	pageManager.showChatPage = function() {
 		swapVisible('chat_page','auth_page');
 		containers.username.innerHTML = chat.current_user.name;
@@ -334,6 +336,7 @@ var initPageManager = function() {
 	pageManager.clearMessage = () => containers.new_message.value = '';
 	pageManager.getMessage = () => containers.new_message.value;
 	pageManager.setMessage = text => containers.new_message.value = text;
+	pageManager.addToMessage = text => containers.new_message.value += text;
 
 	pageManager.rememberMe = () => containers.remember_me.checked === true;
 
@@ -346,8 +349,8 @@ var initPageManager = function() {
 			html += '<span class="message_author">@{' + message.author + '}</span>';
 			
 			html += '<span class="user_controls" data-messageId="' + message.id + '">';
-			html += '<span class="user_controls" name="edit_message">&#x270F;</span>';
-			html += '<span class="user_controls" name="delete_message">&#x1f5d1;</span>';
+			html += '<span class="user_control" name="edit_message">&#x270F;</span>';
+			html += '<span class="user_control" name="delete_message">&#x1f5d1;</span>';
 			html += '</span>';
 			
 			var formated_time = timeformat.format(timeformat.formats.project_default, new Date(message.createTime));
@@ -376,34 +379,37 @@ var initPageManager = function() {
 		}
 
 		this._messages_loaded = true;
-	}
+	};
 
 	pageManager.updateConnectedUsers = function(users) {
 		// Sort users by join time
-		var users_joined = users.filter(user => API._users.indexOf(user) === -1);
+		var users_joined = API._getJoinedUsers();
 
 		users.sort((a, b) => a.time - b.time);
 
-		$('#show_connected').text("Connected Users: " + users.length);
+		$('#show_connected').text('Connected Users: ' + users.length);
 
 		// clean the table except the first row
-		var tbl = $("#table_connected_users");
-		tbl.find("tr:gt(0)").remove();
+		var tbl = $('#table_connected_users');
+		tbl.find('tr:gt(0)').remove();
 		
 		for (var i = 0; i < users.length; ++i) {
-			var html = "<tr class='user_row'><td class='username'>" + users[i].name + "</td></tr>";
+			var html = '<tr class="user_row"><td class="username">' + users[i].name + '</td></tr>';
 			tbl.append(html);
 		}
-
-		if (users.length === 0) return;
 		
 		for (var userId in users_joined)
-			notificationManager.showNotification(users_joined[userId].name + " joined the chat");
-	}
+			notificationManager.showNotification(users_joined[userId].name + ' joined the chat', '[Chat]');
+	};
+
+	// functions to work with message editing
+	var anchor = 0;
+	pageManager.setAnchor = value => anchor = value;
+	pageManager.getAnchor = () => anchor;
+	pageManager.scrollTo = (anchor, time) => window.scrollTo(anchor, time);
 };
 
 var chat = {
-	_send_message: false,
 	_messages_ref: null,
 
 	_message_map: {},
@@ -442,13 +448,13 @@ var chat = {
 			user.name = chat.current_user.name;
 			chat.current_user = user;
 			
-			db_ref.ref("user_list").child(user.uid).set({
+			db_ref.ref('user_list').child(user.uid).set({
 				username: user.name,
 				lastOnline: firebase.database.ServerValue.TIMESTAMP
 			});
 		
-			chat._messages_ref = db_ref.ref("chat_messages");
-			am_online = firebase.database().ref(".info/connected");
+			chat._messages_ref = db_ref.ref('chat_messages');
+			am_online = firebase.database().ref('.info/connected');
 			user_ref = firebase.database().ref('/connected/' + user.name);
 
 			pageManager._messages_loaded = false;
@@ -469,7 +475,7 @@ var chat = {
 				if (element != undefined) element.remove();
 			});
 			
-			chat._messages_ref.orderByChild("createTime").limitToLast(MESSAGES_TO_LOAD).on('value', function(snapshot) {
+			chat._messages_ref.orderByChild('createTime').limitToLast(MESSAGES_TO_LOAD).on('value', function(snapshot) {
 				pageManager.showLoader();
 
 				var messages = [];
@@ -492,7 +498,6 @@ var chat = {
 					message.add_mode = message.editTime === message.createTime ? 'new' : 'edit';
 				});
 
-				chat._send_message = false;
 				if (new_messages.length > 0)
 				{
 					chat.messages = chat.messages.concat(new_messages);
@@ -505,15 +510,15 @@ var chat = {
 			});
 
 
-			db_ref.ref("connected").on("value", function(snapshot) {
+			db_ref.ref('connected').on('value', function(snapshot) {
 				chat.online_users = [];
 				snapshot.forEach(child => {chat.online_users.push({
 					name: child.key,
 					time: child.val()
 				})});
 
-				pageManager.updateConnectedUsers(chat.online_users);
 				API._updateConnectedUsers(chat.online_users);
+				pageManager.updateConnectedUsers(chat.online_users);
 			});
 
 			pageManager.showChatPage();
@@ -522,9 +527,9 @@ var chat = {
 
 		var auth;
 		if(mode === 'register')
-			auth = firebase.auth().createUserWithEmailAndPassword(user.name + "@nomail.com", user.password);
+			auth = firebase.auth().createUserWithEmailAndPassword(user.name + '@nomail.com', user.password);
 		else if (mode === 'login')
-			auth = firebase.auth().signInWithEmailAndPassword(user.name + "@nomail.com", user.password);
+			auth = firebase.auth().signInWithEmailAndPassword(user.name + '@nomail.com', user.password);
 		else return toastr.error('Unknown login mode', 'Error!');
 
 		auth.then(onSuccess).catch(function(error) {
@@ -550,11 +555,7 @@ var chat = {
 		if(pageManager.rememberMe()) {
 			cookies.set('login', user.name);
 			cookies.set('password', user.password);
-		} else {
-			cookies.delete('login');
-			cookies.delete('password');
 		}
-		
 		
 		this.init(user, mode, listener);
 	},
@@ -578,7 +579,11 @@ var chat = {
 	},
 
 	sendMessage: function(message) {
-		this._send_message = true;
+		if (message.length == 0) {
+			toastr.error('Message body cannot be empty', 'Error!');
+			return;
+		}
+
 		var formed_message = {
 			'author'    : chat.current_user.name,
 			'user_id'   : chat.current_user.uid,
@@ -586,6 +591,7 @@ var chat = {
 			'createTime': firebase.database.ServerValue.TIMESTAMP,
 			'editTime'  : firebase.database.ServerValue.TIMESTAMP
 		};
+
 		this._messages_ref.push(formed_message);
 	},
 
@@ -603,6 +609,9 @@ var API = {
 	// Private members
 	_messages: [], // List of all messages and edits
 	_users: [], // Liste of active users
+	_usernames: [],
+	_users_joined: [],
+	_users_quited: [],
 
 	_message_updates_listeners: [], // Listeners of message updates
 	_user_updates_listeners: [], // Listeners of user updats
@@ -610,6 +619,9 @@ var API = {
 	// LogIn modes MODE_REGISTER to create new user, MODE_LOGIN to log into existing account
 	MODE_REGISTER: 'register',
 	MODE_LOGIN: 'login',
+
+	_getJoinedUsers: function() { return this._users_joined; },
+	_getQuitedUsers: function() { return this._users_joined; },
 
 	// Returns list of active users
 	getActiveUsers: function() { return this._users; },
@@ -640,13 +652,16 @@ var API = {
 	},
 
 	_updateConnectedUsers: function(users) {
-		var users_joined = users.filter(user => this._users.indexOf(user) === -1);
-		var users_quited = this._users.filter(user => users.indexOf(user) === -1);
+		var usernames = users.map(user => user.name);
 
-		var user_actions = users_joined.map(user => ({ 'name': user.name, 'action': 'join' }));
-		user_actions = user_actions.concat(users_quited.map(user => ({ 'name': user.name, 'action': 'exit' })));
+		this._users_joined = users.filter(user => this._usernames.indexOf(user.name) === -1);
+		this._users_quited = this._users.filter(user => usernames.indexOf(user.name) === -1);
+
+		var user_actions = this._users_joined.map(user => ({ 'name': user.name, 'action': 'join' }));
+		user_actions = user_actions.concat(this._users_quited.map(user => ({ 'name': user.name, 'action': 'exit' })));
 
 		this._users = users;
+		this._usernames = usernames;
 
 		for (var listenerId = 0; listenerId < this._user_updates_listeners.length; ++listenerId)
 			for (var actId = 0; actId < user_actions.length; ++actId)
@@ -678,20 +693,20 @@ function init() {
 
 	// Configure toastr
 	toastr.options = {
-		"debug": false,
-		"positionClass": "toast-top-left",
-		"preventDuplicates": false,
-		"showDuration": "300",
-		"hideDuration": "1000",
-		"timeOut": "5000",
-		"extendedTimeOut": "1000",
-		"showEasing": "swing",
-		"hideEasing": "linear",
-		"showMethod": "fadeIn",
-		"hideMethod": "fadeOut"
+		'debug': false,
+		'positionClass': 'toast-top-left',
+		'preventDuplicates': false,
+		'showDuration': 300,
+		'hideDuration': 1000,
+		'timeOut': 5000,
+		'extendedTimeOut': 1000,
+		'showEasing': 'swing',
+		'hideEasing': 'linear',
+		'showMethod': 'fadeIn',
+		'hideMethod': 'fadeOut'
 	}
 	
-	var tag = document.getElementById("name_tag");
+	var tag = document.getElementById('name_tag');
 	if (!tag) throw new Error('Detected non-genuine version of the code');
 	
 	// connected users dialog box
@@ -702,9 +717,7 @@ function init() {
 		buttons: [{
 			text: 'Close',
 			class: 'dialog_new',
-			click: function() {
-				$('#table_connected_users_container').dialog('close');
-			}
+			click: () => $('#table_connected_users_container').dialog('close')
 		}]
 	});
 	
@@ -715,9 +728,7 @@ function init() {
 		buttons: [{
 			text:'Close',
 			class: 'dialog_new',
-			click: function() {
-				$('#about_dialog').dialog('close');
-			}
+			click: () => $('#about_dialog').dialog('close')
 		}]
 	});
 	
@@ -726,21 +737,18 @@ function init() {
 	// aboout window click handler
 	$('.about').click(() => $('#about_dialog').dialog('open'));
 
-	if (tag.innerHTML != "By Burey")
+	if (tag.innerHTML != 'By Burey')
 		throw new Error('Detected non-genuine version of the code');
 	
 	
 	var post = function() {
-		if (tag.innerHTML != "By Burey") throw new Error();
+		if (tag.innerHTML != 'By Burey')
+			throw new Error('Detected non-genuine version of the code');
 		
 		var message = pageManager.getMessage().replace(/\s+$/, '');
-		if (message.length == 0) {
-			toastr.error('Message body cannot be empty', 'Error!');
-			return;
-		}
 
 		chat.sendMessage(message);
-		pageManager.setMessage('');
+		pageManager.clearMessage();
 	}
 
 	var btn_new_user = document.getElementById('btn_new_user');
@@ -770,8 +778,9 @@ function init() {
 		chat.updateMessage(global_msg.msgId, pageManager.getMessage());
 		pageManager.clearMessage();
 		pageManager.showMessageCreate();
-		window.scrollTo(0, msg_location_y);
+		pageManager.scrollTo(pageManager.getAnchor(), 100);
 	}
+
 	btn_update_cancel.onclick = function() {
 		global_msg = null;
 		pageManager.clearMessage();
@@ -779,30 +788,29 @@ function init() {
 	}
 	
 	
-	$("#show_password").on('click',function(){
+	$('#show_password').on('click', function(){
 		var show_password = $('#show_password').is(':checked');
 		$('#login_pass').attr('type', show_password ? 'text' : 'password');
 	});
 	
-	$(".emoji_table").on('click',function() {
-		var txt = this.innerHTML;
-		var box = document.getElementById('new_message');
-
-		if(txt === 'URL') box.value += '[url:LinkName](http://address)';
-		else box.value += txt;
-	});
-	
-	$(document).on('click', ".message_author", function(){
-		var author = $.trim($(this).text());
-		pageManager.setMessage(pageManager.getMessage() + author);
-	});
-	
-	$(document).on('click','.user_controls', function(event) {
+	$('.emoji_table').on('click', function() {
 		event.stopImmediatePropagation();
-		var id = $(this).parent().attr("data-messageId");
-		var name = $(this).attr("name");
-		var message_author = $(this).parent().parent().find('.message_author').text();
-		var message_body = $(this).parent().parent().parent().find('.message_body').html();
+		var txt = this.innerHTML;
+
+		if(txt === 'URL') pageManager.addToMessage('[url:LinkName](http://address)');
+		else pageManager.addToMessage(txt);
+	});
+	
+	$('#message_list').on('click', '.message_author', event => pageManager.addToMessage(event.target.innerHTML));
+	
+	$('#message_list').on('click', '.user_control', function(event) {
+		event.stopImmediatePropagation();
+
+		var control = $(event.target);
+		var id = control.parent().attr('data-messageId');
+		var name = control.attr('name');
+		var message_author = control.parent().parent().find('.message_author').text();
+		var message_body = control.parent().parent().parent().find('.message_body').html();
 
 		global_msg = {
 			msgId: id,
@@ -814,11 +822,11 @@ function init() {
 			pageManager.showMessageUpdate();
 			pageManager.setMessage(markdown.htmlToMarkdown(message_body));
 			
-			msg_location_y = window.scrollY;
-			window.scrollTo(0, 100);
+			pageManager.setAnchor(this.getBoundingClientRect().top - 20);
+			pageManager.scrollTo(0, 100);
 		}
 		else if(name === 'delete_message') {
-			if(confirm("Delete this message?"))
+			if(confirm('Delete this message?'))
 				chat._messages_ref.child(id).remove();
 		}
 	});
@@ -827,3 +835,7 @@ function init() {
 	// After full configuration try to auth using cookies
 	chat.authUsingCookies();
 };
+
+
+// Execute init function on full document load
+$(init);
