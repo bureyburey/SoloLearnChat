@@ -793,7 +793,7 @@ function init() {
 		$('#login_pass').attr('type', show_password ? 'text' : 'password');
 	});
 	
-	$('.emoji_table').on('click', function() {
+	$('.emoji_table').on('click', function(event) {
 		event.stopImmediatePropagation();
 		var txt = this.innerHTML;
 
