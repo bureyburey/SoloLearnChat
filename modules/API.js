@@ -2,6 +2,9 @@ var API = {
 	// Private members
 	_messages: [], // List of all messages and edits
 	_users: [], // Liste of active users
+	_usernames: [],
+	_users_joined: [],
+	_users_quited: [],
 
 	_message_updates_listeners: [], // Listeners of message updates
 	_user_updates_listeners: [], // Listeners of user updats
@@ -9,6 +12,9 @@ var API = {
 	// LogIn modes MODE_REGISTER to create new user, MODE_LOGIN to log into existing account
 	MODE_REGISTER: 'register',
 	MODE_LOGIN: 'login',
+
+	_getJoinedUsers: function() { return this._users_joined; },
+	_getQuitedUsers: function() { return this._users_joined; },
 
 	// Returns list of active users
 	getActiveUsers: function() { return this._users; },
@@ -39,13 +45,16 @@ var API = {
 	},
 
 	_updateConnectedUsers: function(users) {
-		var users_joined = users.filter(user => this._users.indexOf(user) === -1);
-		var users_quited = this._users.filter(user => users.indexOf(user) === -1);
+		var usernames = users.map(user => user.name);
 
-		var user_actions = users_joined.map(user => ({ 'name': user.name, 'action': 'join' }));
-		user_actions = user_actions.concat(users_quited.map(user => ({ 'name': user.name, 'action': 'exit' })));
+		this._users_joined = users.filter(user => this._usernames.indexOf(user.name) === -1);
+		this._users_quited = this._users.filter(user => usernames.indexOf(user.name) === -1);
+
+		var user_actions = this._users_joined.map(user => ({ 'name': user.name, 'action': 'join' }));
+		user_actions = user_actions.concat(this._users_quited.map(user => ({ 'name': user.name, 'action': 'exit' })));
 
 		this._users = users;
+		this._usernames = usernames;
 
 		for (var listenerId = 0; listenerId < this._user_updates_listeners.length; ++listenerId)
 			for (var actId = 0; actId < user_actions.length; ++actId)
